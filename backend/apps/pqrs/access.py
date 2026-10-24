@@ -43,6 +43,21 @@ def ciudadano_pqrs_filter(user) -> Q:
     return Q(created_by_id=user.id)
 
 
+def apply_pqrs_entity_context(user, entity_id: int) -> bool:
+    """Aplica membresía activa del usuario en ``entity_id`` (p. ej. Celery sin request).
+
+    En HTTP, ``X-Entity-Id`` ya ajusta ``user.entity_id``; en background hay que
+    resolver la membresía de la entidad del informe/PQRS, no el caché de User.
+    """
+    from apps.accounts.memberships import apply_membership_context, resolve_membership
+
+    membership = resolve_membership(user, entity_id)
+    if membership is None:
+        return False
+    apply_membership_context(user, membership)
+    return True
+
+
 def pqrs_queryset_for_user(user, qs):
     """Filtra queryset según roles del usuario (admite multi-rol con unión)."""
     if is_platform_superadmin(user):

@@ -169,7 +169,7 @@ def generate_informe_pqrs(
 
 def run_informe_pqrs_generation(informe_id: int) -> None:
     """Genera el PDF de un informe en cola (Celery)."""
-    from apps.pqrs.access import pqrs_queryset_for_user
+    from apps.pqrs.access import apply_pqrs_entity_context, pqrs_queryset_for_user
     from apps.pqrs.filters import PQRSFilterSet
 
     informe = (
@@ -194,6 +194,9 @@ def run_informe_pqrs_generation(informe_id: int) -> None:
         return
 
     try:
+        if not apply_pqrs_entity_context(user, entity.id):
+            raise ValueError("El usuario ya no tiene acceso a la entidad del informe.")
+
         base_qs = pqrs_queryset_for_user(user, PQRS.objects.all())
         filter_data = {
             "fecha_desde": informe.fecha_inicio.isoformat(),
