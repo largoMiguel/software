@@ -55,7 +55,7 @@ export function linesToPayload(lines: LineDraft[]): CotizacionItemApi[] {
 }
 
 export function itemsFromApi(items: CotizacionItemApi[]): LineDraft[] {
-  if (!items.length) return [newLine()];
+  if (!items.length) return [];
   return items.map((it) =>
     newLine({
       producto_id: it.producto_id ?? undefined,

@@ -21,10 +21,10 @@ def cotizacion_pdf_bytes(cotizacion: Cotizacion) -> bytes:
             "Empresa",
             [
                 ("Nombre", empresa.nombre),
-                ("NIT", empresa.nit or "—"),
-                ("Dirección", empresa.direccion or "—"),
-                ("Teléfono", empresa.telefono or "—"),
-                ("Email", empresa.email or "—"),
+                ("NIT", empresa.nit or "N/D"),
+                ("Direccion", empresa.direccion or "N/D"),
+                ("Telefono", empresa.telefono or "N/D"),
+                ("Email", empresa.email or "N/D"),
             ],
         ),
         (
@@ -45,7 +45,7 @@ def cotizacion_pdf_bytes(cotizacion: Cotizacion) -> bytes:
                 ("Total", f"${cotizacion.total:,.2f}"),
             ],
         ),
-        ("Ítems", item_rows or [("—", "Sin ítems")]),
+        ("Items", item_rows or [("N/D", "Sin items")]),
     ]
     subtitle = " · ".join(
         x for x in [empresa.nit and f"NIT {empresa.nit}", empresa.telefono, empresa.email] if x

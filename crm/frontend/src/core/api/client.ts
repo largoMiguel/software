@@ -21,19 +21,35 @@ api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   return config;
 });
 
-export async function downloadPdf(path: string, filename: string) {
+export async function downloadPdf(path: string, filename: string): Promise<void> {
   const token = await getClerkToken();
   const empresaId = useAuthStore.getState().activeEmpresaId;
   const headers: Record<string, string> = {};
   if (token) headers.Authorization = `Bearer ${token}`;
   if (empresaId) headers["X-Empresa-Id"] = String(empresaId);
-  const res = await fetch(`${API_URL}${path}`, { headers });
-  if (!res.ok) throw new Error("No se pudo descargar el PDF");
+  const urlPath = path.startsWith("/") ? path : `/${path}`;
+  const res = await fetch(`${API_URL}${urlPath}`, { headers });
+  if (!res.ok) {
+    let detail = "No se pudo descargar el PDF";
+    try {
+      const body = await res.json();
+      if (body?.detail) detail = String(body.detail);
+    } catch {
+      /* respuesta no JSON */
+    }
+    throw new Error(detail);
+  }
   const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
+  const type = blob.type || res.headers.get("content-type") || "";
+  if (type && !type.includes("pdf") && !type.includes("octet-stream")) {
+    throw new Error("El servidor no devolvió un PDF válido");
+  }
+  const objectUrl = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
+  a.href = objectUrl;
+  a.download = filename.endsWith(".pdf") ? filename : `${filename}.pdf`;
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+  URL.revokeObjectURL(objectUrl);
 }

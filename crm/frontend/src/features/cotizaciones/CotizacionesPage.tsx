@@ -4,10 +4,10 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ConfirmDeleteDialog } from "@/components/ui/ConfirmDeleteDialog";
 import {
-  btnLink,
   btnPrimary,
   btnSecondary,
   selectClass,
+  SoftOneAlert,
   SoftOneEmpty,
   SoftOneLoading,
   SoftOnePageHeader,
@@ -17,7 +17,8 @@ import {
   SoftOneTableHead,
   SoftOneToolbar,
 } from "@/components/ui/SoftOneUi";
-import { api, downloadPdf } from "@/core/api/client";
+import { PdfDownloadButton } from "@/components/ui/PdfDownloadButton";
+import { api } from "@/core/api/client";
 import { paginatedParams, type Paginated } from "@/core/api/pagination";
 import { useDebouncedValue } from "@/core/hooks/useDebouncedValue";
 import { useListPageSize } from "@/core/hooks/useListPageSize";
@@ -40,6 +41,7 @@ export default function CotizacionesPage() {
   const [estado, setEstado] = useState("");
   const [page, setPage] = useState(1);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [pdfError, setPdfError] = useState<string | null>(null);
   const debouncedSearch = useDebouncedValue(search, 300);
 
   const { data, isLoading, isFetching } = useQuery({
@@ -96,6 +98,8 @@ export default function CotizacionesPage() {
           </Link>
         }
       />
+
+      {pdfError && <SoftOneAlert>{pdfError}</SoftOneAlert>}
 
       <SoftOneToolbar>
         <SoftOneSearchBar
@@ -155,17 +159,18 @@ export default function CotizacionesPage() {
                   <td className="px-4 py-3 text-slate-700">${Number(c.total).toLocaleString("es-CO")}</td>
                 <td className="space-x-2 px-4 py-3 text-right">
                   {c.estado === "borrador" && (
-                    <Link to={`/app/cotizaciones/${c.id}/editar`} className={btnLink}>
+                    <Link
+                      to={`/app/cotizaciones/${c.id}/editar`}
+                      className="text-sm font-medium text-[#0e7490] hover:underline"
+                    >
                       Editar
                     </Link>
                   )}
-                  <button
-                    type="button"
-                    className={btnLink}
-                    onClick={() => downloadPdf(`/cotizaciones/${c.id}/pdf/`, `${c.numero}.pdf`)}
-                  >
-                    PDF
-                  </button>
+                  <PdfDownloadButton
+                    path={`/cotizaciones/${c.id}/pdf/`}
+                    filename={`${c.numero}.pdf`}
+                    onError={setPdfError}
+                  />
                   {c.estado === "borrador" && (
                     <>
                       <button
@@ -203,7 +208,10 @@ export default function CotizacionesPage() {
                       </>
                     )}
                     {c.estado === "aceptada" && (
-                      <Link to={`/app/facturas?desde=${c.id}`} className={btnLink}>
+                      <Link
+                        to={`/app/facturas?desde=${c.id}`}
+                        className="text-sm font-medium text-[#0e7490] hover:underline"
+                      >
                         Facturar
                       </Link>
                     )}

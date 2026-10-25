@@ -1,13 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, Package, Upload } from "lucide-react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import {
   btnPrimary,
   btnSecondary,
   SoftOneAlert,
   inputClass,
   selectClass,
-  SoftOneCard,
   SoftOneEmpty,
   SoftOneField,
   SoftOneLoading,
@@ -28,8 +27,8 @@ import {
   type CategoryValue,
 } from "@/components/ui/CreatableCategorySelect";
 import { ConfirmDeleteDialog } from "@/components/ui/ConfirmDeleteDialog";
+import { SoftOneAccionesMenu } from "@/components/ui/SoftOneAccionesMenu";
 import { SoftOneRowActions } from "@/components/ui/SoftOneRowActions";
-import { CategoriasProductoPanel } from "@/features/catalogo/CategoriasProductoPanel";
 
 type Producto = {
   id: number;
@@ -59,10 +58,11 @@ export default function ProductosPage() {
   const [tipoFilter, setTipoFilter] = useState("");
   const [categoriaFilter, setCategoriaFilter] = useState<CategoryValue>({ kind: "none" });
   const debouncedSearch = useDebouncedValue(search, 300);
-  const fileRef = useRef<HTMLInputElement>(null);
   const [updateExisting, setUpdateExisting] = useState(true);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
 
   const [nombre, setNombre] = useState("");
   const [codigo, setCodigo] = useState("");
@@ -154,8 +154,9 @@ export default function ProductosPage() {
     },
     onSuccess: (res) => {
       setImportResult(res);
+      setImportModalOpen(false);
+      setImportFile(null);
       qc.invalidateQueries({ queryKey: ["productos"] });
-      if (fileRef.current) fileRef.current.value = "";
     },
     onError: (err) => setImportError(formatApiError(err)),
   });
@@ -167,82 +168,111 @@ export default function ProductosPage() {
     <div className="space-y-6">
       <SoftOnePageHeader
         title="Catálogo"
-        subtitle="CRUD, categorías, búsqueda e importación CSV"
+        subtitle="Productos y servicios · búsqueda y carga masiva CSV"
         icon={Package}
+        actions={
+          <SoftOneAccionesMenu
+            disabled={importCsv.isPending}
+            items={[
+              {
+                id: "import-csv",
+                label: "Importar CSV (hasta 5000 filas)",
+                icon: <Upload className="h-4 w-4 text-[#0e7490]" />,
+                onClick: () => {
+                  setImportError(null);
+                  setImportModalOpen(true);
+                },
+              },
+              {
+                id: "template",
+                label: "Descargar plantilla ejemplo",
+                icon: <Download className="h-4 w-4 text-slate-600" />,
+                onClick: () => {
+                  const a = document.createElement("a");
+                  a.href = "/productos-ejemplo.csv";
+                  a.download = "productos-ejemplo.csv";
+                  a.click();
+                },
+              },
+            ]}
+          />
+        }
       />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <CategoriasProductoPanel />
-        <SoftOneCard title="Importar CSV (hasta 5000 filas)">
-        <p className="mb-3 text-sm text-slate-600">
-          Columnas:{" "}
-          <code className="rounded bg-slate-100 px-1">nombre</code>,{" "}
-          <code className="rounded bg-slate-100 px-1">codigo</code>,{" "}
-          <code className="rounded bg-slate-100 px-1">precio</code>,{" "}
-          <code className="rounded bg-slate-100 px-1">tipo</code> (producto/servicio),{" "}
-          <code className="rounded bg-slate-100 px-1">iva_porcentaje</code>,{" "}
-          <code className="rounded bg-slate-100 px-1">descripcion</code>,{" "}
-          <code className="rounded bg-slate-100 px-1">categoria</code> (se crea si no existe). Si existe
-          el mismo código, se actualiza.
-        </p>
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".csv,text/csv"
-            className="text-sm text-slate-600"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) importCsv.mutate(f);
-            }}
-          />
-          <label className="flex items-center gap-2 text-sm text-slate-700">
-            <input
-              type="checkbox"
-              checked={updateExisting}
-              onChange={(e) => setUpdateExisting(e.target.checked)}
-            />
-            Actualizar si el código ya existe
-          </label>
-          <a href="/productos-ejemplo.csv" className={btnSecondary + " inline-flex"} download>
-            <Download className="h-4 w-4" />
-            Plantilla ejemplo
-          </a>
-          {importCsv.isPending && (
-            <span className="flex items-center gap-2 text-sm text-[#0e7490]">
-              <Upload className="h-4 w-4 animate-pulse" />
-              Importando…
-            </span>
+      {importError && <SoftOneAlert>{importError}</SoftOneAlert>}
+      {importResult && (
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+          <p>
+            Importación: creados <strong>{importResult.created}</strong> · actualizados{" "}
+            <strong>{importResult.updated}</strong> · omitidos{" "}
+            <strong>{importResult.skipped}</strong>
+          </p>
+          {importResult.errors.length > 0 && (
+            <ul className="mt-2 max-h-32 list-disc overflow-y-auto pl-5 text-red-700">
+              {importResult.errors.slice(0, 20).map((e) => (
+                <li key={`${e.row}-${e.message}`}>
+                  Fila {e.row}: {e.message}
+                </li>
+              ))}
+              {importResult.errors.length > 20 && (
+                <li>… y {importResult.errors.length - 20} errores más</li>
+              )}
+            </ul>
           )}
         </div>
-        {importError && (
-          <div className="mt-3">
-            <SoftOneAlert>{importError}</SoftOneAlert>
+      )}
+
+      {importModalOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-50 bg-black/50"
+            onClick={() => !importCsv.isPending && setImportModalOpen(false)}
+          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl">
+              <h3 className="text-lg font-semibold text-slate-800">Importar CSV</h3>
+              <p className="mt-2 text-sm text-slate-600">
+                Columnas: nombre, codigo, precio, tipo (producto/servicio), iva_porcentaje,
+                descripcion, categoria (opcional). Máximo 5000 filas.
+              </p>
+              <div className="mt-4 space-y-3">
+                <input
+                  type="file"
+                  accept=".csv,text/csv"
+                  className="text-sm text-slate-600"
+                  onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+                />
+                <label className="flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={updateExisting}
+                    onChange={(e) => setUpdateExisting(e.target.checked)}
+                  />
+                  Actualizar si el código ya existe
+                </label>
+              </div>
+              <div className="mt-6 flex justify-end gap-2">
+                <button
+                  type="button"
+                  className={btnSecondary}
+                  disabled={importCsv.isPending}
+                  onClick={() => setImportModalOpen(false)}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className={btnPrimary}
+                  disabled={!importFile || importCsv.isPending}
+                  onClick={() => importFile && importCsv.mutate(importFile)}
+                >
+                  {importCsv.isPending ? "Importando…" : "Importar"}
+                </button>
+              </div>
+            </div>
           </div>
-        )}
-        {importResult && (
-          <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-            <p>
-              Creados: <strong>{importResult.created}</strong> · Actualizados:{" "}
-              <strong>{importResult.updated}</strong> · Omitidos:{" "}
-              <strong>{importResult.skipped}</strong>
-            </p>
-            {importResult.errors.length > 0 && (
-              <ul className="mt-2 max-h-32 list-disc overflow-y-auto pl-5 text-red-700">
-                {importResult.errors.slice(0, 20).map((e) => (
-                  <li key={`${e.row}-${e.message}`}>
-                    Fila {e.row}: {e.message}
-                  </li>
-                ))}
-                {importResult.errors.length > 20 && (
-                  <li>… y {importResult.errors.length - 20} errores más</li>
-                )}
-              </ul>
-            )}
-          </div>
-        )}
-        </SoftOneCard>
-      </div>
+        </>
+      )}
 
       <form
         className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 lg:items-end"

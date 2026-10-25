@@ -8,6 +8,7 @@ import {
   btnPrimary,
   btnSecondary,
   selectClass,
+  SoftOneAlert,
   SoftOneEmpty,
   SoftOneLoading,
   SoftOnePageHeader,
@@ -17,7 +18,8 @@ import {
   SoftOneTableHead,
   SoftOneToolbar,
 } from "@/components/ui/SoftOneUi";
-import { api, downloadPdf } from "@/core/api/client";
+import { PdfDownloadButton } from "@/components/ui/PdfDownloadButton";
+import { api } from "@/core/api/client";
 import { paginatedParams, type Paginated } from "@/core/api/pagination";
 import { useDebouncedValue } from "@/core/hooks/useDebouncedValue";
 import { useListPageSize } from "@/core/hooks/useListPageSize";
@@ -40,6 +42,7 @@ export default function FacturasPage() {
   const [estado, setEstado] = useState("");
   const [page, setPage] = useState(1);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [pdfError, setPdfError] = useState<string | null>(null);
   const debouncedSearch = useDebouncedValue(search, 300);
 
   const { data, isLoading, isFetching } = useQuery({
@@ -109,6 +112,8 @@ export default function FacturasPage() {
         </div>
       )}
 
+      {pdfError && <SoftOneAlert>{pdfError}</SoftOneAlert>}
+
       <SoftOneToolbar>
         <SoftOneSearchBar
           value={search}
@@ -167,13 +172,11 @@ export default function FacturasPage() {
                     ${Number(f.total_pagado).toLocaleString("es-CO")}
                   </td>
                   <td className="space-x-2 px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      className={btnLink}
-                      onClick={() => downloadPdf(`/facturas/${f.id}/pdf/`, `${f.numero}.pdf`)}
-                    >
-                      PDF
-                    </button>
+                    <PdfDownloadButton
+                      path={`/facturas/${f.id}/pdf/`}
+                      filename={`${f.numero}.pdf`}
+                      onError={setPdfError}
+                    />
                   {f.estado === "borrador" && (
                     <>
                       <button

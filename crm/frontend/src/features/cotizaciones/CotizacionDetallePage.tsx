@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileText } from "lucide-react";
+import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { PdfDownloadButton } from "@/components/ui/PdfDownloadButton";
 import {
-  btnLink,
   btnPrimary,
   btnSecondary,
   SoftOneAlert,
@@ -12,7 +13,7 @@ import {
   SoftOneTable,
   SoftOneTableHead,
 } from "@/components/ui/SoftOneUi";
-import { api, downloadPdf } from "@/core/api/client";
+import { api } from "@/core/api/client";
 import type { CotizacionItemApi } from "@/features/cotizaciones/cotizacionFormUtils";
 
 type CotizacionDetail = {
@@ -35,6 +36,7 @@ export default function CotizacionDetallePage() {
   const cotId = Number(id);
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const [pdfError, setPdfError] = useState<string | null>(null);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["cotizacion", cotId],
@@ -106,13 +108,12 @@ export default function CotizacionDetallePage() {
             <button type="button" className={btnSecondary} onClick={() => duplicar.mutate()} disabled={duplicar.isPending}>
               Duplicar
             </button>
-            <button
-              type="button"
-              className={btnLink}
-              onClick={() => downloadPdf(`/cotizaciones/${data.id}/pdf/`, `${data.numero}.pdf`)}
-            >
-              PDF
-            </button>
+            <PdfDownloadButton
+              path={`/cotizaciones/${data.id}/pdf/`}
+              filename={`${data.numero}.pdf`}
+              className={btnSecondary}
+              onError={setPdfError}
+            />
             {data.estado === "borrador" && (
               <button type="button" className={btnPrimary} onClick={() => enviar.mutate()} disabled={enviar.isPending}>
                 Enviar
@@ -136,6 +137,8 @@ export default function CotizacionDetallePage() {
           </div>
         }
       />
+
+      {pdfError && <SoftOneAlert>{pdfError}</SoftOneAlert>}
 
       <SoftOneCard title="Resumen">
         <p className="text-sm">Emisión: {data.fecha_emision}</p>

@@ -6,6 +6,22 @@ from pathlib import Path
 
 from fpdf import FPDF
 
+_EMPTY = "N/D"
+
+
+def pdf_safe_text(value: object) -> str:
+    """Helvetica en fpdf2 no admite guiones tipográficos ni algunos símbolos Unicode."""
+    text = str(value) if value is not None else _EMPTY
+    text = (
+        text.replace("\u2014", "-")
+        .replace("\u2013", "-")
+        .replace("\u2018", "'")
+        .replace("\u2019", "'")
+        .replace("\u201c", '"')
+        .replace("\u201d", '"')
+    )
+    return text
+
 
 class DocumentoPDF(FPDF):
     def header(self):
@@ -16,10 +32,10 @@ class DocumentoPDF(FPDF):
             except Exception:
                 pass
         self.set_font("Helvetica", "B", 14)
-        self.cell(0, 10, self.title_text, ln=True, align="C")
+        self.cell(0, 10, pdf_safe_text(self.title_text), ln=True, align="C")
         if getattr(self, "empresa_subtitle", ""):
             self.set_font("Helvetica", "", 10)
-            self.cell(0, 6, self.empresa_subtitle, ln=True, align="C")
+            self.cell(0, 6, pdf_safe_text(self.empresa_subtitle), ln=True, align="C")
         self.ln(4)
 
     def footer(self):
@@ -62,13 +78,13 @@ def render_simple_pdf(
 
     for heading, rows in sections:
         pdf.set_font("Helvetica", "B", 11)
-        pdf.cell(0, 8, heading, ln=True)
+        pdf.cell(0, 8, pdf_safe_text(heading), ln=True)
         pdf.set_font("Helvetica", "", 10)
         for label, value in rows:
-            pdf.multi_cell(0, 6, f"{label}: {value}")
+            pdf.multi_cell(0, 6, f"{pdf_safe_text(label)}: {pdf_safe_text(value)}")
         pdf.ln(2)
 
-    out = pdf.output(dest="S")
+    out = bytes(pdf.output())
     if logo_path:
         try:
             Path(logo_path).unlink(missing_ok=True)

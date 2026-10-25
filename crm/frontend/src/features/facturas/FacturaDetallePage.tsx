@@ -15,7 +15,8 @@ import {
   SoftOneTable,
   SoftOneTableHead,
 } from "@/components/ui/SoftOneUi";
-import { api, downloadPdf } from "@/core/api/client";
+import { PdfDownloadButton } from "@/components/ui/PdfDownloadButton";
+import { api } from "@/core/api/client";
 import { formatApiError } from "@/core/api/pagination";
 import type { CotizacionItemApi } from "@/features/cotizaciones/cotizacionFormUtils";
 
@@ -50,6 +51,7 @@ export default function FacturaDetallePage() {
   const qc = useQueryClient();
   const [pagoForm, setPagoForm] = useState({ fecha: "", monto: "", metodo: "", referencia: "" });
   const [pagoError, setPagoError] = useState<string | null>(null);
+  const [pdfError, setPdfError] = useState<string | null>(null);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["factura", facturaId],
@@ -110,13 +112,12 @@ export default function FacturaDetallePage() {
                 Editar
               </Link>
             )}
-            <button
-              type="button"
-              className={btnLink}
-              onClick={() => downloadPdf(`/facturas/${data.id}/pdf/`, `${data.numero}.pdf`)}
-            >
-              PDF
-            </button>
+            <PdfDownloadButton
+              path={`/facturas/${data.id}/pdf/`}
+              filename={`${data.numero}.pdf`}
+              className={btnSecondary}
+              onError={setPdfError}
+            />
             {data.estado === "borrador" && (
               <button type="button" className={btnPrimary} onClick={() => emitir.mutate()} disabled={emitir.isPending}>
                 Emitir
@@ -130,6 +131,8 @@ export default function FacturaDetallePage() {
           </div>
         }
       />
+
+      {pdfError && <SoftOneAlert>{pdfError}</SoftOneAlert>}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <SoftOneCard title="Totales">

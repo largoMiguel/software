@@ -54,7 +54,7 @@ export function CotizacionEditor({
   const [notas, setNotas] = useState(initialNotas);
   const [fechaVencimiento, setFechaVencimiento] = useState(initialFechaVencimiento ?? "");
   const [lines, setLines] = useState<LineDraft[]>(() =>
-    initialItems ? itemsFromApi(initialItems) : [newLine()],
+    initialItems ? itemsFromApi(initialItems) : [],
   );
   const [error, setError] = useState<string | null>(null);
 
@@ -100,7 +100,7 @@ export function CotizacionEditor({
   }
 
   function removeLine(key: string) {
-    setLines((prev) => (prev.length <= 1 ? prev : prev.filter((l) => l.key !== key)));
+    setLines((prev) => prev.filter((l) => l.key !== key));
   }
 
   const save = useMutation({
@@ -128,7 +128,7 @@ export function CotizacionEditor({
   const title = mode === "create" ? "Nueva cotización" : `Editar ${numero ?? "cotización"}`;
   const subtitle =
     mode === "create"
-      ? "Cliente, varias líneas y búsqueda en catálogo"
+      ? "Elige cliente, busca productos en el catálogo o agrega líneas a mano"
       : "Solo borradores. Ajusta líneas y condiciones.";
 
   return (
@@ -146,155 +146,160 @@ export function CotizacionEditor({
 
       {error && <SoftOneAlert>{error}</SoftOneAlert>}
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
-        <div className="space-y-6">
-          <SoftOneCard title="Cliente y condiciones">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <SearchableSelect
-                  label="Cliente"
-                  value={clienteId}
-                  onChange={setClienteId}
-                  endpoint="/clientes/"
-                  placeholder="Buscar cliente por nombre, NIT o email…"
-                  mapOption={(row) => ({
-                    id: Number(row.id),
-                    label: String(row.razon_social ?? ""),
-                    hint: [row.documento, row.email].filter(Boolean).join(" · ") || undefined,
-                  })}
-                />
-              </div>
-              <SoftOneField label="Válida hasta (opcional)">
-                <input
-                  type="date"
-                  className={inputClass}
-                  value={fechaVencimiento}
-                  onChange={(e) => setFechaVencimiento(e.target.value)}
-                />
-              </SoftOneField>
-              <SoftOneField label="Notas (opcional)" className="sm:col-span-2">
-                <textarea
-                  className={`${inputClass} min-h-[72px] py-2`}
-                  value={notas}
-                  onChange={(e) => setNotas(e.target.value)}
-                  placeholder="Condiciones comerciales, plazo de entrega…"
-                />
-              </SoftOneField>
-            </div>
-          </SoftOneCard>
+      <SoftOneCard title="Cliente y condiciones">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <SearchableSelect
+              label="Cliente"
+              value={clienteId}
+              onChange={setClienteId}
+              endpoint="/clientes/"
+              placeholder="Buscar cliente por nombre, NIT o email…"
+              mapOption={(row) => ({
+                id: Number(row.id),
+                label: String(row.razon_social ?? ""),
+                hint: [row.documento, row.email].filter(Boolean).join(" · ") || undefined,
+              })}
+            />
+          </div>
+          <SoftOneField label="Válida hasta (opcional)">
+            <input
+              type="date"
+              className={inputClass}
+              value={fechaVencimiento}
+              onChange={(e) => setFechaVencimiento(e.target.value)}
+            />
+          </SoftOneField>
+          <SoftOneField label="Notas (opcional)" className="sm:col-span-2">
+            <textarea
+              className={`${inputClass} min-h-[72px] py-2`}
+              value={notas}
+              onChange={(e) => setNotas(e.target.value)}
+              placeholder="Condiciones comerciales, plazo de entrega…"
+            />
+          </SoftOneField>
+        </div>
+      </SoftOneCard>
 
-          <SoftOneCard title="Líneas de la cotización">
-            <div className="mb-3 flex justify-end">
-              <button
-                type="button"
-                className={btnSecondary + " !px-2 !py-1 text-xs"}
-                onClick={() => setLines((p) => [...p, newLine()])}
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Línea manual
-              </button>
-            </div>
-            <SoftOneTable>
-              <SoftOneTableHead>
-                <th className="min-w-[180px] px-2 py-2">Descripción</th>
-                <th className="w-20 px-2 py-2">Cant.</th>
-                <th className="w-28 px-2 py-2">Precio</th>
-                <th className="w-16 px-2 py-2">Dto %</th>
-                <th className="w-16 px-2 py-2">IVA %</th>
-                <th className="w-24 px-2 py-2 text-right">Total</th>
-                <th className="w-10 px-2 py-2" />
-              </SoftOneTableHead>
-              <tbody>
-                {lines.map((line) => (
-                  <tr key={line.key} className="border-b border-slate-100 align-top last:border-0">
-                    <td className="px-2 py-2">
-                      <input
-                        className={inputClass}
-                        value={line.descripcion}
-                        onChange={(e) => updateLine(line.key, { descripcion: e.target.value })}
-                        placeholder="Producto o servicio"
-                      />
-                    </td>
-                    <td className="px-2 py-2">
-                      <input
-                        className={inputClass}
-                        value={line.cantidad}
-                        onChange={(e) => updateLine(line.key, { cantidad: e.target.value })}
-                      />
-                    </td>
-                    <td className="px-2 py-2">
-                      <input
-                        className={inputClass}
-                        value={line.precio_unitario}
-                        onChange={(e) => updateLine(line.key, { precio_unitario: e.target.value })}
-                      />
-                    </td>
-                    <td className="px-2 py-2">
-                      <input
-                        className={inputClass}
-                        value={line.descuento_porcentaje}
-                        onChange={(e) =>
-                          updateLine(line.key, { descuento_porcentaje: e.target.value })
-                        }
-                      />
-                    </td>
-                    <td className="px-2 py-2">
-                      <input
-                        className={inputClass}
-                        value={line.iva_porcentaje}
-                        onChange={(e) => updateLine(line.key, { iva_porcentaje: e.target.value })}
-                      />
-                    </td>
-                    <td className="px-2 py-2 text-right text-sm font-medium text-slate-700">
-                      ${lineTotals(line).total.toLocaleString("es-CO", { maximumFractionDigits: 0 })}
-                    </td>
-                    <td className="px-2 py-2">
-                      <button
-                        type="button"
-                        className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600"
-                        onClick={() => removeLine(line.key)}
-                        aria-label="Quitar línea"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </SoftOneTable>
-
-            <div className="mt-4 flex flex-col gap-2 border-t border-slate-100 pt-4 text-sm sm:ml-auto sm:max-w-xs">
-              <div className="flex justify-between text-slate-600">
-                <span>Subtotal</span>
-                <span>${totals.sub.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</span>
-              </div>
-              <div className="flex justify-between text-slate-600">
-                <span>IVA</span>
-                <span>${totals.iva.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</span>
-              </div>
-              <div className="flex justify-between text-base font-semibold text-slate-800">
-                <span>Total</span>
-                <span>${totals.total.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</span>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              className={`${btnPrimary} mt-4 w-full sm:w-auto`}
-              onClick={() => save.mutate()}
-              disabled={save.isPending}
-            >
-              {save.isPending
-                ? "Guardando…"
-                : mode === "create"
-                  ? "Crear cotización"
-                  : "Guardar cambios"}
-            </button>
-          </SoftOneCard>
+      <SoftOneCard title="Líneas de la cotización">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0 flex-1 sm:max-w-md">
+            <p className="mb-1 text-sm font-medium text-slate-700">Agregar del catálogo</p>
+            <ProductCatalogPicker onPick={addFromCatalog} variant="inline" />
+          </div>
+          <button
+            type="button"
+            className={btnSecondary}
+            onClick={() => setLines((p) => [...p, newLine()])}
+          >
+            <Plus className="h-4 w-4" />
+            Línea manual
+          </button>
         </div>
 
-        <ProductCatalogPicker onPick={addFromCatalog} />
-      </div>
+        {lines.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50/80 px-4 py-8 text-center text-sm text-slate-500">
+            Busca un producto arriba o usa «Línea manual» para empezar.
+          </p>
+        ) : (
+          <SoftOneTable>
+            <SoftOneTableHead>
+              <th className="min-w-[180px] px-2 py-2">Descripción</th>
+              <th className="w-20 px-2 py-2">Cant.</th>
+              <th className="w-28 px-2 py-2">Precio</th>
+              <th className="w-16 px-2 py-2">Dto %</th>
+              <th className="w-16 px-2 py-2">IVA %</th>
+              <th className="w-24 px-2 py-2 text-right">Total</th>
+              <th className="w-10 px-2 py-2" />
+            </SoftOneTableHead>
+            <tbody>
+              {lines.map((line) => (
+                <tr key={line.key} className="border-b border-slate-100 align-top last:border-0">
+                  <td className="px-2 py-2">
+                    <input
+                      className={inputClass}
+                      value={line.descripcion}
+                      onChange={(e) => updateLine(line.key, { descripcion: e.target.value })}
+                      placeholder="Producto o servicio"
+                    />
+                  </td>
+                  <td className="px-2 py-2">
+                    <input
+                      className={inputClass}
+                      value={line.cantidad}
+                      onChange={(e) => updateLine(line.key, { cantidad: e.target.value })}
+                    />
+                  </td>
+                  <td className="px-2 py-2">
+                    <input
+                      className={inputClass}
+                      value={line.precio_unitario}
+                      onChange={(e) => updateLine(line.key, { precio_unitario: e.target.value })}
+                    />
+                  </td>
+                  <td className="px-2 py-2">
+                    <input
+                      className={inputClass}
+                      value={line.descuento_porcentaje}
+                      onChange={(e) =>
+                        updateLine(line.key, { descuento_porcentaje: e.target.value })
+                      }
+                    />
+                  </td>
+                  <td className="px-2 py-2">
+                    <input
+                      className={inputClass}
+                      value={line.iva_porcentaje}
+                      onChange={(e) => updateLine(line.key, { iva_porcentaje: e.target.value })}
+                    />
+                  </td>
+                  <td className="px-2 py-2 text-right text-sm font-medium text-slate-700">
+                    ${lineTotals(line).total.toLocaleString("es-CO", { maximumFractionDigits: 0 })}
+                  </td>
+                  <td className="px-2 py-2">
+                    <button
+                      type="button"
+                      className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                      onClick={() => removeLine(line.key)}
+                      aria-label="Quitar línea"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </SoftOneTable>
+        )}
+
+        <div className="mt-4 flex flex-col gap-2 border-t border-slate-100 pt-4 text-sm sm:ml-auto sm:max-w-xs">
+          <div className="flex justify-between text-slate-600">
+            <span>Subtotal</span>
+            <span>${totals.sub.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</span>
+          </div>
+          <div className="flex justify-between text-slate-600">
+            <span>IVA</span>
+            <span>${totals.iva.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</span>
+          </div>
+          <div className="flex justify-between text-base font-semibold text-slate-800">
+            <span>Total</span>
+            <span>${totals.total.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          className={`${btnPrimary} mt-4 w-full sm:w-auto`}
+          onClick={() => save.mutate()}
+          disabled={save.isPending}
+        >
+          {save.isPending
+            ? "Guardando…"
+            : mode === "create"
+              ? "Crear cotización"
+              : "Guardar cambios"}
+        </button>
+      </SoftOneCard>
     </div>
   );
 }
