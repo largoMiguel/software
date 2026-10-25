@@ -16,6 +16,19 @@ export const btnSecondary =
 export const btnLink =
   "text-sm font-medium text-[#0e7490] underline-offset-2 hover:text-[#3eafd4] hover:underline disabled:opacity-50";
 
+/** Botones compactos en tablas (acciones por fila). */
+export const btnAction =
+  "inline-flex items-center justify-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:border-[#3eafd4]/40 hover:bg-[#f0fbff] disabled:opacity-50";
+
+export const btnActionPrimary =
+  "inline-flex items-center justify-center gap-1.5 rounded-md border border-[#3eafd4] bg-[#3eafd4] px-2.5 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-[#2f9fc2] disabled:opacity-50";
+
+export const btnActionSuccess =
+  "inline-flex items-center justify-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-800 shadow-sm transition-colors hover:bg-emerald-100 disabled:opacity-50";
+
+export const btnActionDanger =
+  "inline-flex items-center justify-center gap-1.5 rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-700 shadow-sm transition-colors hover:bg-red-100 disabled:opacity-50";
+
 export function SoftOneField({
   label,
   children,

@@ -49,6 +49,10 @@ class Producto(TenantModel):
     descripcion = models.TextField(blank=True, default="")
     tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default=TIPO_SERVICIO)
     precio = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    precio_incluye_iva = models.BooleanField(
+        default=True,
+        help_text="Precio de catalogo con IVA incluido (se desglosa al cotizar/facturar).",
+    )
     iva_porcentaje = models.DecimalField(
         max_digits=5,
         decimal_places=2,

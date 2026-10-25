@@ -50,6 +50,7 @@ class CotizacionItem(models.Model):
     descripcion = models.CharField(max_length=300)
     cantidad = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("1"))
     precio_unitario = models.DecimalField(max_digits=14, decimal_places=2)
+    precio_incluye_iva = models.BooleanField(default=True)
     descuento_porcentaje = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0"))
     iva_porcentaje = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("19"))
     subtotal_linea = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))

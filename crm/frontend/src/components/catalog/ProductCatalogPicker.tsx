@@ -12,6 +12,7 @@ export type CatalogProduct = {
   nombre: string;
   precio: string;
   iva_porcentaje: string;
+  precio_incluye_iva?: boolean;
   tipo: string;
   categoria_nombre_display?: string;
 };

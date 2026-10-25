@@ -1,58 +1,65 @@
 from __future__ import annotations
 
-from apps.common.pdf import render_simple_pdf
+from apps.common.document_pdf import (
+    CommercialDocumentPdf,
+    DocumentLineRow,
+    DocumentParty,
+    DocumentTotals,
+    render_commercial_document_pdf,
+)
 from apps.cotizaciones.models import Cotizacion
 
 
 def cotizacion_pdf_bytes(cotizacion: Cotizacion) -> bytes:
     empresa = cotizacion.empresa
     cliente = cotizacion.cliente
-    item_rows = []
-    for item in cotizacion.items.all():
-        item_rows.append(
-            (
-                f"{item.descripcion} x{item.cantidad}",
-                f"${item.total_linea:,.2f}",
-            )
+    filas = [
+        DocumentLineRow(
+            descripcion=item.descripcion,
+            cantidad=item.cantidad,
+            precio_unitario=item.precio_unitario,
+            descuento_porcentaje=item.descuento_porcentaje,
+            iva_porcentaje=item.iva_porcentaje,
+            subtotal_linea=item.subtotal_linea,
+            iva_linea=item.iva_linea,
+            total_linea=item.total_linea,
         )
-
-    sections = [
-        (
-            "Empresa",
-            [
-                ("Nombre", empresa.nombre),
-                ("NIT", empresa.nit or "N/D"),
-                ("Direccion", empresa.direccion or "N/D"),
-                ("Telefono", empresa.telefono or "N/D"),
-                ("Email", empresa.email or "N/D"),
-            ],
-        ),
-        (
-            "Cliente",
-            [
-                ("Razón social", cliente.razon_social),
-                ("Documento", f"{cliente.tipo_documento.upper()} {cliente.documento}"),
-            ],
-        ),
-        (
-            "Cotización",
-            [
-                ("Número", cotizacion.numero),
-                ("Estado", cotizacion.get_estado_display()),
-                ("Fecha", str(cotizacion.fecha_emision)),
-                ("Subtotal", f"${cotizacion.subtotal:,.2f}"),
-                ("IVA", f"${cotizacion.iva_total:,.2f}"),
-                ("Total", f"${cotizacion.total:,.2f}"),
-            ],
-        ),
-        ("Items", item_rows or [("N/D", "Sin items")]),
+        for item in cotizacion.items.all()
     ]
-    subtitle = " · ".join(
-        x for x in [empresa.nit and f"NIT {empresa.nit}", empresa.telefono, empresa.email] if x
-    )
-    return render_simple_pdf(
-        f"Cotización {cotizacion.numero}",
-        sections,
+    doc = CommercialDocumentPdf(
+        tipo_titulo="COTIZACION",
+        numero=cotizacion.numero,
+        fecha_emision=str(cotizacion.fecha_emision),
+        fecha_vencimiento=str(cotizacion.fecha_vencimiento) if cotizacion.fecha_vencimiento else None,
+        estado=cotizacion.get_estado_display(),
+        empresa_nombre=empresa.nombre,
+        empresa_nit=empresa.nit or "",
+        empresa_direccion=empresa.direccion or "",
+        empresa_telefono=empresa.telefono or "",
+        empresa_email=empresa.email or "",
         logo_url=empresa.logo_url or "",
-        empresa_subtitle=subtitle,
+        emisor=DocumentParty(
+            titulo="Emisor",
+            lineas=[
+                empresa.nombre,
+                empresa.direccion or "N/D",
+                empresa.telefono or "",
+                empresa.email or "",
+            ],
+        ),
+        cliente=DocumentParty(
+            titulo="Cliente",
+            lineas=[
+                cliente.razon_social,
+                f"{cliente.tipo_documento.upper()} {cliente.documento}",
+            ],
+        ),
+        notas=cotizacion.notas or "",
+        filas=filas,
+        totales=DocumentTotals(
+            subtotal=cotizacion.subtotal,
+            iva=cotizacion.iva_total,
+            total=cotizacion.total,
+        ),
     )
+    return render_commercial_document_pdf(doc)

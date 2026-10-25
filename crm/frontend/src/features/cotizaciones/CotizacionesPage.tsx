@@ -5,7 +5,6 @@ import { Link } from "react-router-dom";
 import { ConfirmDeleteDialog } from "@/components/ui/ConfirmDeleteDialog";
 import {
   btnPrimary,
-  btnSecondary,
   selectClass,
   SoftOneAlert,
   SoftOneEmpty,
@@ -17,7 +16,7 @@ import {
   SoftOneTableHead,
   SoftOneToolbar,
 } from "@/components/ui/SoftOneUi";
-import { PdfDownloadButton } from "@/components/ui/PdfDownloadButton";
+import { CotizacionRowActions } from "@/features/cotizaciones/CotizacionRowActions";
 import { api } from "@/core/api/client";
 import { paginatedParams, type Paginated } from "@/core/api/pagination";
 import { useDebouncedValue } from "@/core/hooks/useDebouncedValue";
@@ -33,6 +32,14 @@ type Cotizacion = {
 };
 
 const ESTADOS = ["", "borrador", "enviada", "aceptada", "rechazada", "vencida"];
+
+const ESTADO_STYLE: Record<string, string> = {
+  borrador: "bg-slate-100 text-slate-700",
+  enviada: "bg-amber-50 text-amber-800",
+  aceptada: "bg-emerald-50 text-emerald-800",
+  rechazada: "bg-red-50 text-red-700",
+  vencida: "bg-slate-200 text-slate-600",
+};
 
 export default function CotizacionesPage() {
   const qc = useQueryClient();
@@ -89,7 +96,7 @@ export default function CotizacionesPage() {
     <div className="space-y-6">
       <SoftOnePageHeader
         title="Cotizaciones"
-        subtitle="Busca por número o cliente; filtra por estado"
+        subtitle="Flujo: borrador → enviada → aceptada → factura"
         icon={FileText}
         actions={
           <Link to="/app/cotizaciones/nueva" className={btnPrimary}>
@@ -139,7 +146,7 @@ export default function CotizacionesPage() {
               <th className="px-4 py-3">Fecha</th>
               <th className="px-4 py-3">Estado</th>
               <th className="px-4 py-3">Total</th>
-              <th className="px-4 py-3 text-right">Acciones</th>
+              <th className="min-w-[280px] px-4 py-3 text-right">Acciones</th>
             </SoftOneTableHead>
             <tbody className={isFetching ? "opacity-60" : ""}>
               {list.map((c) => (
@@ -152,69 +159,27 @@ export default function CotizacionesPage() {
                   <td className="px-4 py-3 text-slate-600">{c.cliente_nombre}</td>
                   <td className="px-4 py-3 text-slate-600">{c.fecha_emision}</td>
                   <td className="px-4 py-3">
-                    <span className="rounded bg-[#f0fbff] px-2 py-0.5 text-xs font-medium text-[#0e7490]">
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${ESTADO_STYLE[c.estado] ?? ESTADO_STYLE.borrador}`}
+                    >
                       {c.estado}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-slate-700">${Number(c.total).toLocaleString("es-CO")}</td>
-                <td className="space-x-2 px-4 py-3 text-right">
-                  {c.estado === "borrador" && (
-                    <Link
-                      to={`/app/cotizaciones/${c.id}/editar`}
-                      className="text-sm font-medium text-[#0e7490] hover:underline"
-                    >
-                      Editar
-                    </Link>
-                  )}
-                  <PdfDownloadButton
-                    path={`/cotizaciones/${c.id}/pdf/`}
-                    filename={`${c.numero}.pdf`}
-                    onError={setPdfError}
-                  />
-                  {c.estado === "borrador" && (
-                    <>
-                      <button
-                        type="button"
-                        className="text-xs font-medium text-red-600 hover:underline"
-                        onClick={() => setDeleteId(c.id)}
-                      >
-                        Eliminar
-                      </button>
-                      <button
-                        type="button"
-                        className={btnSecondary + " !px-2 !py-1 text-xs"}
-                        onClick={() => enviar.mutate(c.id)}
-                      >
-                        Enviar
-                      </button>
-                    </>
-                  )}
-                    {c.estado === "enviada" && (
-                      <>
-                        <button
-                          type="button"
-                          className={btnSecondary + " !px-2 !py-1 text-xs"}
-                          onClick={() => aceptar.mutate(c.id)}
-                        >
-                          Aceptar
-                        </button>
-                        <button
-                          type="button"
-                          className="text-xs font-medium text-red-600 hover:underline"
-                          onClick={() => rechazar.mutate(c.id)}
-                        >
-                          Rechazar
-                        </button>
-                      </>
-                    )}
-                    {c.estado === "aceptada" && (
-                      <Link
-                        to={`/app/facturas?desde=${c.id}`}
-                        className="text-sm font-medium text-[#0e7490] hover:underline"
-                      >
-                        Facturar
-                      </Link>
-                    )}
+                  <td className="px-4 py-3 font-medium text-slate-800">
+                    ${Number(c.total).toLocaleString("es-CO")}
+                  </td>
+                  <td className="px-4 py-3">
+                    <CotizacionRowActions
+                      id={c.id}
+                      numero={c.numero}
+                      estado={c.estado}
+                      onPdfError={setPdfError}
+                      onDelete={() => setDeleteId(c.id)}
+                      onEnviar={() => enviar.mutate(c.id)}
+                      onAceptar={() => aceptar.mutate(c.id)}
+                      onRechazar={() => rechazar.mutate(c.id)}
+                      enviarPending={enviar.isPending}
+                    />
                   </td>
                 </tr>
               ))}

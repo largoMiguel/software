@@ -85,6 +85,7 @@ export function FacturaEditor({
           producto_id: p.id,
           descripcion: p.nombre,
           precio_unitario: p.precio,
+          precio_incluye_iva: p.precio_incluye_iva !== false,
           iva_porcentaje: p.iva_porcentaje,
         }),
       ];

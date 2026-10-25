@@ -20,6 +20,7 @@ def recalcular_factura(factura: Factura) -> None:
             item.precio_unitario,
             item.descuento_porcentaje,
             item.iva_porcentaje,
+            precio_incluye_iva=item.precio_incluye_iva,
         )
         item.subtotal_linea = totals["subtotal_linea"]
         item.iva_linea = totals["iva_linea"]
@@ -71,9 +72,6 @@ def factura_desde_cotizacion(cotizacion: Cotizacion) -> Factura:
         fecha_emision=timezone.localdate(),
         fecha_vencimiento=cotizacion.fecha_vencimiento,
         notas=cotizacion.notas,
-        subtotal=cotizacion.subtotal,
-        iva_total=cotizacion.iva_total,
-        total=cotizacion.total,
         estado=Factura.EST_BORRADOR,
     )
     for item in cotizacion.items.all():
@@ -83,13 +81,12 @@ def factura_desde_cotizacion(cotizacion: Cotizacion) -> Factura:
             descripcion=item.descripcion,
             cantidad=item.cantidad,
             precio_unitario=item.precio_unitario,
+            precio_incluye_iva=item.precio_incluye_iva,
             descuento_porcentaje=item.descuento_porcentaje,
             iva_porcentaje=item.iva_porcentaje,
-            subtotal_linea=item.subtotal_linea,
-            iva_linea=item.iva_linea,
-            total_linea=item.total_linea,
             orden=item.orden,
         )
+    recalcular_factura(factura)
     asignar_numero_si_falta(factura)
     return factura
 

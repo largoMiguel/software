@@ -35,6 +35,7 @@ type Producto = {
   codigo: string;
   nombre: string;
   precio: string;
+  precio_incluye_iva?: boolean;
   iva_porcentaje: string;
   tipo: string;
   categoria_id?: number | null;
@@ -101,6 +102,7 @@ export default function ProductosPage() {
         precio,
         tipo,
         iva_porcentaje: 19,
+        precio_incluye_iva: true,
         ...categoryToPayload(categoria),
       });
     },
@@ -121,6 +123,7 @@ export default function ProductosPage() {
         precio: p.precio,
         tipo: p.tipo,
         iva_porcentaje: p.iva_porcentaje,
+        precio_incluye_iva: p.precio_incluye_iva !== false,
         is_active: p.is_active,
         ...categoryToPayload(p.categoria),
       });
@@ -298,10 +301,10 @@ export default function ProductosPage() {
             onChange={(e) => setCodigo(e.target.value)}
           />
         </SoftOneField>
-        <SoftOneField label="Precio">
+        <SoftOneField label="Precio (IVA incluido)">
           <input
             className={inputClass}
-            placeholder="Precio"
+            placeholder="Precio de venta"
             value={precio}
             onChange={(e) => setPrecio(e.target.value)}
             required
@@ -452,6 +455,7 @@ function ProductoEditModal({
   const [precio, setPrecio] = useState(product.precio);
   const [tipo, setTipo] = useState(product.tipo);
   const [iva, setIva] = useState(product.iva_porcentaje);
+  const [precioIncluyeIva, setPrecioIncluyeIva] = useState(product.precio_incluye_iva !== false);
   const [categoria, setCategoria] = useState<CategoryValue>(
     product.categoria_id
       ? { kind: "id", id: product.categoria_id, label: product.categoria_nombre_display ?? "" }
@@ -467,7 +471,17 @@ function ProductoEditModal({
           className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-2xl"
           onSubmit={(e) => {
             e.preventDefault();
-            onSave({ ...product, nombre, codigo, precio, tipo, iva_porcentaje: iva, is_active: isActive, categoria });
+            onSave({
+              ...product,
+              nombre,
+              codigo,
+              precio,
+              tipo,
+              iva_porcentaje: iva,
+              precio_incluye_iva: precioIncluyeIva,
+              is_active: isActive,
+              categoria,
+            });
           }}
         >
           <h3 className="text-lg font-semibold">Editar producto</h3>
@@ -483,7 +497,7 @@ function ProductoEditModal({
             <SoftOneField label="Código">
               <input className={inputClass} value={codigo} onChange={(e) => setCodigo(e.target.value)} />
             </SoftOneField>
-            <SoftOneField label="Precio">
+            <SoftOneField label="Precio (IVA incluido)">
               <input className={inputClass} value={precio} onChange={(e) => setPrecio(e.target.value)} required />
             </SoftOneField>
             <SoftOneField label="Tipo">
@@ -492,9 +506,17 @@ function ProductoEditModal({
                 <option value="producto">Producto</option>
               </select>
             </SoftOneField>
-            <SoftOneField label="IVA %">
+            <SoftOneField label="Tarifa IVA %">
               <input className={inputClass} value={iva} onChange={(e) => setIva(e.target.value)} />
             </SoftOneField>
+            <label className="flex items-center gap-2 text-sm text-slate-700 sm:col-span-2">
+              <input
+                type="checkbox"
+                checked={precioIncluyeIva}
+                onChange={(e) => setPrecioIncluyeIva(e.target.checked)}
+              />
+              Precio de catalogo incluye IVA (recomendado)
+            </label>
             <div className="sm:col-span-2">
               <CreatableCategorySelect tipo="producto" value={categoria} onChange={setCategoria} />
             </div>

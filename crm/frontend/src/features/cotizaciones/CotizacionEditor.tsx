@@ -89,6 +89,7 @@ export function CotizacionEditor({
           producto_id: p.id,
           descripcion: p.nombre,
           precio_unitario: p.precio,
+          precio_incluye_iva: p.precio_incluye_iva !== false,
           iva_porcentaje: p.iva_porcentaje,
         }),
       ];
@@ -206,9 +207,9 @@ export function CotizacionEditor({
             <SoftOneTableHead>
               <th className="min-w-[180px] px-2 py-2">Descripción</th>
               <th className="w-20 px-2 py-2">Cant.</th>
-              <th className="w-28 px-2 py-2">Precio</th>
+              <th className="w-28 px-2 py-2">Precio unit.</th>
               <th className="w-16 px-2 py-2">Dto %</th>
-              <th className="w-16 px-2 py-2">IVA %</th>
+              <th className="w-16 px-2 py-2">Tarifa IVA</th>
               <th className="w-24 px-2 py-2 text-right">Total</th>
               <th className="w-10 px-2 py-2" />
             </SoftOneTableHead>
@@ -246,13 +247,22 @@ export function CotizacionEditor({
                       }
                     />
                   </td>
-                  <td className="px-2 py-2">
-                    <input
-                      className={inputClass}
-                      value={line.iva_porcentaje}
-                      onChange={(e) => updateLine(line.key, { iva_porcentaje: e.target.value })}
-                    />
-                  </td>
+                    <td className="px-2 py-2">
+                      {line.precio_incluye_iva ? (
+                        <span
+                          className="flex h-10 items-center text-xs text-slate-500"
+                          title="El precio ya incluye IVA; aqui solo se desglosa"
+                        >
+                          {line.iva_porcentaje}%
+                        </span>
+                      ) : (
+                        <input
+                          className={inputClass}
+                          value={line.iva_porcentaje}
+                          onChange={(e) => updateLine(line.key, { iva_porcentaje: e.target.value })}
+                        />
+                      )}
+                    </td>
                   <td className="px-2 py-2 text-right text-sm font-medium text-slate-700">
                     ${lineTotals(line).total.toLocaleString("es-CO", { maximumFractionDigits: 0 })}
                   </td>
@@ -272,9 +282,12 @@ export function CotizacionEditor({
           </SoftOneTable>
         )}
 
-        <div className="mt-4 flex flex-col gap-2 border-t border-slate-100 pt-4 text-sm sm:ml-auto sm:max-w-xs">
-          <div className="flex justify-between text-slate-600">
-            <span>Subtotal</span>
+            <p className="mt-2 text-xs text-slate-500">
+              Precios del catalogo incluyen IVA; el desglose es informativo (no se suma dos veces).
+            </p>
+            <div className="mt-4 flex flex-col gap-2 border-t border-slate-100 pt-4 text-sm sm:ml-auto sm:max-w-xs">
+              <div className="flex justify-between text-slate-600">
+                <span>Subtotal (sin IVA)</span>
             <span>${totals.sub.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</span>
           </div>
           <div className="flex justify-between text-slate-600">

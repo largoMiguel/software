@@ -14,6 +14,7 @@ def recalcular_cotizacion(cotizacion: Cotizacion) -> None:
             item.precio_unitario,
             item.descuento_porcentaje,
             item.iva_porcentaje,
+            precio_incluye_iva=item.precio_incluye_iva,
         )
         item.subtotal_linea = totals["subtotal_linea"]
         item.iva_linea = totals["iva_linea"]

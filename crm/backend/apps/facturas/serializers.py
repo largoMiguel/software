@@ -34,6 +34,7 @@ class FacturaItemSerializer(serializers.ModelSerializer):
             "descripcion",
             "cantidad",
             "precio_unitario",
+            "precio_incluye_iva",
             "descuento_porcentaje",
             "iva_porcentaje",
             "subtotal_linea",
@@ -136,6 +137,10 @@ class FacturaSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("Producto de otra empresa.")
             if producto and not item_data.get("descripcion"):
                 item_data["descripcion"] = producto.nombre
+            if producto and "precio_incluye_iva" not in item_data:
+                item_data["precio_incluye_iva"] = producto.precio_incluye_iva
+            elif "precio_incluye_iva" not in item_data:
+                item_data.setdefault("precio_incluye_iva", True)
             FacturaItem.objects.create(factura=factura, orden=idx, **item_data)
 
 

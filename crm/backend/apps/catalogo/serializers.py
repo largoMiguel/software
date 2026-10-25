@@ -27,6 +27,7 @@ class ProductoSerializer(serializers.ModelSerializer):
             "descripcion",
             "tipo",
             "precio",
+            "precio_incluye_iva",
             "iva_porcentaje",
             "is_active",
             "created_at",
