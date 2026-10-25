@@ -28,12 +28,12 @@ dist/
 *.log
 
 # Cloudflared
-deploy/cloudflared/*.json
+public/deploy/cloudflared/*.json
 
 # Deploy keys (never commit private keys)
-deploy/keys/*
-!deploy/keys/README.md
-!deploy/keys/*.pub
+public/deploy/keys/*
+!public/deploy/keys/README.md
+!public/deploy/keys/*.pub
 
 # Logs de cron en el servidor (rsync --delete no debe borrarlos)
 logs/

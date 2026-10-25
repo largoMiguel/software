@@ -1,0 +1,3 @@
+nombre,codigo,precio,tipo,iva_porcentaje,descripcion
+Consultoría hora,SRV-001,150000,servicio,19,Soporte técnico por hora
+Licencia anual,LIC-100,1200000,producto,19,Software anual
