@@ -32,8 +32,15 @@ npm run dev   # http://localhost:5174
 ## Multiempresa
 
 - Cabecera `X-Empresa-Id` en cada petición API (el frontend la envía automáticamente).
-- Superadmin SoftOne (`is_platform_admin`): CRUD en `/api/v1/platform/empresas/`.
-- Admin de empresa: configuración en `/api/v1/empresa/config/`, miembros en `/api/v1/membresias/`.
+- **Plataforma SoftOne** (`is_platform_admin`):
+  - Gestiona tenants en `/app/platform/empresas` y `/api/v1/platform/empresas/`.
+  - Elige empresa cliente con clic en la tarjeta; **no** aparece en `/me` memberships ni en el equipo del tenant.
+  - Solo puede **configurar** la empresa (datos, miembros); no opera cotizaciones/facturas como tenant.
+- **Equipo del cliente** (membresías reales):
+  - **Propietario**: uno por empresa; al asignar otro, el anterior pasa a administrador.
+  - **Administrador**: configuración + invitar miembros + operación CRM.
+  - **Vendedor**: clientes, cotizaciones y facturas (sin gestión de miembros).
+- APIs: configuración `/api/v1/empresa/config/`, miembros `/api/v1/membresias/`.
 
 ## Despliegue en servidor
 
@@ -55,4 +62,4 @@ npm run dev   # http://localhost:5174
 cd /opt/softone-crm && deploy/scripts/backup-crm-db.sh
 ```
 
-Cron sugerido (servidor): `0 4 * * * /opt/softone-crm/deploy/scripts/backup-crm-db.sh >> /opt/softone-crm/logs/backup.log 2>&1`
+En el servidor (una vez): `deploy/scripts/install-crm-backup-cron.sh` (backup diario 04:00, retención 14 días).

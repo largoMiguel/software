@@ -55,19 +55,6 @@ export async function fetchPdfBlob(path: string): Promise<Blob> {
   return blob;
 }
 
-/** @deprecated Usar PdfDownloadButton + PdfViewerModal (sin descarga automatica). */
-export async function openPdfViewer(path: string, _filename: string): Promise<void> {
-  const blob = await fetchPdfBlob(path);
-  const pdfBlob = blob.type.includes("pdf") ? blob : new Blob([blob], { type: "application/pdf" });
-  const objectUrl = URL.createObjectURL(pdfBlob);
-  const opened = window.open(objectUrl, "_blank", "noopener,noreferrer");
-  if (!opened) {
-    URL.revokeObjectURL(objectUrl);
-    throw new Error("No se pudo abrir el visor. Usa el boton Ver PDF en la aplicacion.");
-  }
-  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 120_000);
-}
-
 export async function downloadPdfFromBlob(blob: Blob, filename: string): Promise<void> {
   const objectUrl = URL.createObjectURL(blob);
   const a = document.createElement("a");

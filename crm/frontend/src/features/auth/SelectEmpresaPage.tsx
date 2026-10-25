@@ -1,5 +1,5 @@
 import { Building2, ChevronRight } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { btnLink } from "@/components/ui/SoftOneUi";
 import { useAuthStore } from "@/core/auth/store";
 
@@ -9,6 +9,10 @@ export default function SelectEmpresaPage() {
   const navigate = useNavigate();
 
   if (!user) return null;
+
+  if (user.is_platform_admin && user.memberships.length === 0) {
+    return <Navigate to="/app/platform/empresas" replace />;
+  }
 
   const options = user.memberships;
 

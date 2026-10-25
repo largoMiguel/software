@@ -34,6 +34,7 @@ type Empresa = {
 
 type Membresia = {
   id: number;
+  user_id: number;
   user_email: string;
   user_name: string;
   rol: string;
@@ -169,10 +170,13 @@ export default function EmpresaConfigPage() {
 
 function InvitarMiembroSection() {
   const qc = useQueryClient();
+  const me = useAuthStore((s) => s.user);
+  const isPlatformAdmin = me?.is_platform_admin;
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [rol, setRol] = useState("vendedor");
   const [removeId, setRemoveId] = useState<number | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const { data: membresias, isLoading } = useQuery({
     queryKey: ["membresias"],
@@ -187,24 +191,35 @@ function InvitarMiembroSection() {
       await api.post("/membresias/", { email, full_name: fullName, rol });
     },
     onSuccess: () => {
+      setActionError(null);
       setEmail("");
       setFullName("");
       qc.invalidateQueries({ queryKey: ["membresias"] });
     },
+    onError: (err) => setActionError(formatApiError(err)),
   });
 
   const changeRol = useMutation({
     mutationFn: async ({ id, rol: newRol }: { id: number; rol: string }) => {
       await api.patch(`/membresias/${id}/rol/`, { rol: newRol });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["membresias"] }),
+    onSuccess: () => {
+      setActionError(null);
+      qc.invalidateQueries({ queryKey: ["membresias"] });
+    },
+    onError: (err) => setActionError(formatApiError(err)),
   });
 
   const remove = useMutation({
     mutationFn: (id: number) => api.delete(`/membresias/${id}/`),
     onSuccess: () => {
+      setActionError(null);
       setRemoveId(null);
       qc.invalidateQueries({ queryKey: ["membresias"] });
+    },
+    onError: (err) => {
+      setRemoveId(null);
+      setActionError(formatApiError(err));
     },
   });
 
@@ -218,6 +233,11 @@ function InvitarMiembroSection() {
       <p className="mb-4 text-sm text-slate-600">
         Solo usuarios del cliente. Las cuentas de administración de plataforma SoftOne no pueden invitarse aquí.
       </p>
+      {actionError && (
+        <div className="mb-4">
+          <SoftOneAlert variant="error">{actionError}</SoftOneAlert>
+        </div>
+      )}
       <form
         className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:items-end"
         onSubmit={(e) => {
@@ -263,7 +283,9 @@ function InvitarMiembroSection() {
             <th className="px-4 py-3 text-right">Acciones</th>
           </SoftOneTableHead>
           <tbody>
-            {list.map((m) => (
+            {list.map((m) => {
+              const isSelf = !isPlatformAdmin && me?.id === m.user_id;
+              return (
               <tr key={m.id} className="border-b border-slate-100 last:border-0">
                 <td className="px-4 py-3 font-medium text-slate-800">{m.user_name || "—"}</td>
                 <td className="px-4 py-3 text-slate-600">{m.user_email}</td>
@@ -281,12 +303,19 @@ function InvitarMiembroSection() {
                   </select>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <button type="button" className={btnLink + " text-red-600"} onClick={() => setRemoveId(m.id)}>
-                    Quitar
-                  </button>
+                  {isSelf ? (
+                    <span className="text-xs text-slate-400" title="Pide a otro administrador que gestione tu acceso">
+                      Tú
+                    </span>
+                  ) : (
+                    <button type="button" className={btnLink + " text-red-600"} onClick={() => setRemoveId(m.id)}>
+                      Quitar
+                    </button>
+                  )}
                 </td>
               </tr>
-            ))}
+            );
+            })}
           </tbody>
         </SoftOneTable>
       )}

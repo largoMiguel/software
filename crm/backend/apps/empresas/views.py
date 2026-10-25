@@ -15,8 +15,10 @@ from rest_framework.views import APIView
 from apps.accounts.tenancy import require_empresa
 from apps.empresas.membership_policy import (
     assert_keeps_at_least_one_admin,
+    assert_may_remove_member,
     assert_user_may_be_team_member,
     team_membresias_for_empresa,
+    transfer_propietario,
 )
 from apps.empresas.models import Empresa, Membresia
 from apps.common.b2_client import upload_public_object
@@ -160,6 +162,7 @@ class MembresiaViewSet(
         return Response(MembresiaSerializer(membresia).data, status=status.HTTP_201_CREATED)
 
     def perform_destroy(self, instance):
+        assert_may_remove_member(self.request, instance)
         assert_user_may_be_team_member(instance.user)
         if instance.rol in Membresia.ADMIN_ROLES:
             assert_keeps_at_least_one_admin(instance.empresa, exclude_membresia_id=instance.pk)
@@ -176,4 +179,7 @@ class MembresiaViewSet(
             assert_keeps_at_least_one_admin(membresia.empresa, exclude_membresia_id=membresia.pk)
         membresia.rol = rol
         membresia.save(update_fields=["rol"])
+        if rol == Membresia.ROL_OWNER:
+            transfer_propietario(membresia.empresa, membresia.user_id)
+            membresia.refresh_from_db()
         return Response(MembresiaSerializer(membresia).data)

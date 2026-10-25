@@ -18,7 +18,7 @@ export const ROL_LABELS: Record<string, string> = {
 
 /** Texto corto para la pantalla de miembros del tenant. */
 export const ROL_DESCRIPTIONS: Record<string, string> = {
-  owner: "Control total: empresa, miembros y operación comercial.",
+  owner: "Control total. Solo hay un propietario; al asignar otro, el anterior pasa a administrador.",
   admin: "Configura la empresa e invita miembros; opera el CRM.",
   vendedor: "Clientes, cotizaciones y facturas; sin gestión de miembros.",
 };

@@ -1,0 +1,46 @@
+name: CRM backend tests
+
+on:
+  push:
+    paths:
+      - "crm/backend/**"
+      - ".github/workflows/crm-backend-tests.yml"
+  pull_request:
+    paths:
+      - "crm/backend/**"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: softone_crm
+          POSTGRES_PASSWORD: softone_crm
+          POSTGRES_DB: softone_crm
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U softone_crm"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: crm/backend
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings.dev
+      SECRET_KEY: ci-test-secret-key-not-for-production
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: softone_crm
+      POSTGRES_PASSWORD: softone_crm
+      POSTGRES_DB: softone_crm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -r requirements.txt
+      - run: python manage.py test apps.empresas.tests -v2

@@ -4,7 +4,11 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from apps.accounts.services.clerk import ClerkServiceError, invite_user_to_clerk
-from apps.empresas.membership_policy import assert_user_email_may_be_invited, assert_user_may_be_team_member
+from apps.empresas.membership_policy import (
+    assert_user_email_may_be_invited,
+    assert_user_may_be_team_member,
+    transfer_propietario,
+)
 from apps.empresas.models import Empresa, Membresia
 
 User = get_user_model()
@@ -112,6 +116,8 @@ class InvitarMiembroSerializer(serializers.Serializer):
         if not created:
             membresia.rol = rol
             membresia.save(update_fields=["rol"])
+        if rol == Membresia.ROL_OWNER:
+            transfer_propietario(empresa, user.pk)
 
         try:
             invite_user_to_clerk(email, full_name)
