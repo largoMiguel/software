@@ -24,6 +24,8 @@ class MembershipRulesTests(TestCase):
         self.factory = APIRequestFactory()
 
     def test_transfer_propietario_demotes_previous_owner(self):
+        self.admin_m.rol = Membresia.ROL_OWNER
+        self.admin_m.save(update_fields=["rol"])
         transfer_propietario(self.empresa, self.admin.id)
         self.admin_m.refresh_from_db()
         self.owner_m.refresh_from_db()
