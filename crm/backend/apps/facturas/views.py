@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from django.http import HttpResponse
+import logging
+
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from apps.common.pdf import pdf_http_response
 from apps.cotizaciones.models import Cotizacion
 from apps.facturas.models import Factura
 from apps.facturas.pdf import factura_pdf_bytes
@@ -72,10 +74,16 @@ class FacturaViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     def pdf(self, request, pk=None):
         factura = self.get_object()
         recalcular_factura(factura)
-        data = factura_pdf_bytes(factura)
-        response = HttpResponse(data, content_type="application/pdf")
-        response["Content-Disposition"] = f'attachment; filename="{factura.numero}.pdf"'
-        return response
+        try:
+            data = factura_pdf_bytes(factura)
+        except Exception:
+            logging.getLogger(__name__).exception("PDF factura %s", factura.pk)
+            return Response(
+                {"detail": "No se pudo generar el PDF. Revisa los datos de la factura."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        inline = request.query_params.get("download") != "1"
+        return pdf_http_response(data, f"{factura.numero}.pdf", inline=inline)
 
     @action(detail=False, methods=["post"], url_path="desde-cotizacion/(?P<cotizacion_id>[^/.]+)")
     def desde_cotizacion(self, request, cotizacion_id=None):

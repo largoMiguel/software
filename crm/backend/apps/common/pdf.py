@@ -10,7 +10,7 @@ _EMPTY = "N/D"
 
 
 def pdf_safe_text(value: object) -> str:
-    """Helvetica en fpdf2 no admite guiones tipográficos ni algunos símbolos Unicode."""
+    """Helvetica solo admite Latin-1; normaliza guiones y caracteres fuera de rango."""
     text = str(value) if value is not None else _EMPTY
     text = (
         text.replace("\u2014", "-")
@@ -20,28 +20,33 @@ def pdf_safe_text(value: object) -> str:
         .replace("\u201c", '"')
         .replace("\u201d", '"')
     )
-    return text
+    return text.encode("latin-1", errors="replace").decode("latin-1")
 
 
 class DocumentoPDF(FPDF):
     def header(self):
+        self.set_x(self.l_margin)
         if getattr(self, "logo_path", None):
             try:
                 self.image(self.logo_path, x=10, y=8, h=18)
-                self.set_xy(10, 30)
+                self.set_y(30)
             except Exception:
                 pass
+        self.set_x(self.l_margin)
         self.set_font("Helvetica", "B", 14)
         self.cell(0, 10, pdf_safe_text(self.title_text), ln=True, align="C")
         if getattr(self, "empresa_subtitle", ""):
+            self.set_x(self.l_margin)
             self.set_font("Helvetica", "", 10)
             self.cell(0, 6, pdf_safe_text(self.empresa_subtitle), ln=True, align="C")
         self.ln(4)
+        self.set_x(self.l_margin)
 
     def footer(self):
         self.set_y(-15)
+        self.set_x(self.l_margin)
         self.set_font("Helvetica", "I", 8)
-        self.cell(0, 10, f"Página {self.page_no()}", align="C")
+        self.cell(0, 10, f"Pagina {self.page_no()}", align="C")
 
 
 def _download_logo(logo_url: str) -> str | None:
@@ -77,11 +82,14 @@ def render_simple_pdf(
     pdf.set_font("Helvetica", "", 10)
 
     for heading, rows in sections:
+        pdf.set_x(pdf.l_margin)
         pdf.set_font("Helvetica", "B", 11)
-        pdf.cell(0, 8, pdf_safe_text(heading), ln=True)
+        pdf.cell(pdf.epw, 8, pdf_safe_text(heading), ln=True)
         pdf.set_font("Helvetica", "", 10)
         for label, value in rows:
-            pdf.multi_cell(0, 6, f"{pdf_safe_text(label)}: {pdf_safe_text(value)}")
+            pdf.set_x(pdf.l_margin)
+            line = f"{pdf_safe_text(label)}: {pdf_safe_text(value)}"
+            pdf.multi_cell(pdf.epw, 6, line)
         pdf.ln(2)
 
     out = bytes(pdf.output())
@@ -91,3 +99,15 @@ def render_simple_pdf(
         except OSError:
             pass
     return out
+
+
+def pdf_http_response(data: bytes, filename: str, *, inline: bool = True) -> "HttpResponse":
+    from django.http import HttpResponse
+
+    safe = filename.replace('"', "").strip() or "documento.pdf"
+    if not safe.lower().endswith(".pdf"):
+        safe = f"{safe}.pdf"
+    disposition = "inline" if inline else "attachment"
+    response = HttpResponse(data, content_type="application/pdf")
+    response["Content-Disposition"] = f'{disposition}; filename="{safe}"'
+    return response

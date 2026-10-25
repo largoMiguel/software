@@ -21,16 +21,24 @@ api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   return config;
 });
 
-export async function downloadPdf(path: string, filename: string): Promise<void> {
+async function pdfAuthHeaders(): Promise<Record<string, string>> {
   const token = await getClerkToken();
   const empresaId = useAuthStore.getState().activeEmpresaId;
   const headers: Record<string, string> = {};
   if (token) headers.Authorization = `Bearer ${token}`;
   if (empresaId) headers["X-Empresa-Id"] = String(empresaId);
-  const urlPath = path.startsWith("/") ? path : `/${path}`;
-  const res = await fetch(`${API_URL}${urlPath}`, { headers });
+  return headers;
+}
+
+function normalizePdfPath(path: string): string {
+  return path.startsWith("/") ? path : `/${path}`;
+}
+
+export async function fetchPdfBlob(path: string): Promise<Blob> {
+  const headers = await pdfAuthHeaders();
+  const res = await fetch(`${API_URL}${normalizePdfPath(path)}`, { headers });
   if (!res.ok) {
-    let detail = "No se pudo descargar el PDF";
+    let detail = "No se pudo obtener el PDF";
     try {
       const body = await res.json();
       if (body?.detail) detail = String(body.detail);
@@ -44,6 +52,24 @@ export async function downloadPdf(path: string, filename: string): Promise<void>
   if (type && !type.includes("pdf") && !type.includes("octet-stream")) {
     throw new Error("El servidor no devolvió un PDF válido");
   }
+  return blob;
+}
+
+/** Abre el PDF en una pestaña nueva (ver, imprimir o guardar desde el visor del navegador). */
+export async function openPdfViewer(path: string, filename: string): Promise<void> {
+  const blob = await fetchPdfBlob(path);
+  const pdfBlob = blob.type.includes("pdf") ? blob : new Blob([blob], { type: "application/pdf" });
+  const objectUrl = URL.createObjectURL(pdfBlob);
+  const opened = window.open(objectUrl, "_blank", "noopener,noreferrer");
+  if (!opened) {
+    await downloadPdfFromBlob(pdfBlob, filename);
+    URL.revokeObjectURL(objectUrl);
+    return;
+  }
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 120_000);
+}
+
+export async function downloadPdfFromBlob(blob: Blob, filename: string): Promise<void> {
   const objectUrl = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = objectUrl;
@@ -52,4 +78,11 @@ export async function downloadPdf(path: string, filename: string): Promise<void>
   a.click();
   a.remove();
   URL.revokeObjectURL(objectUrl);
+}
+
+/** Descarga directa (sin abrir visor). */
+export async function downloadPdf(path: string, filename: string): Promise<void> {
+  const sep = path.includes("?") ? "&" : "?";
+  const blob = await fetchPdfBlob(`${path}${sep}download=1`);
+  await downloadPdfFromBlob(blob, filename);
 }
