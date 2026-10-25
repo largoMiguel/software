@@ -1,7 +1,6 @@
 import { Menu } from "lucide-react";
 import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
-import CrmContextBanner from "@/components/layout/CrmContextBanner";
 import CrmSidebar from "@/components/layout/CrmSidebar";
 import { useAuthStore } from "@/core/auth/store";
 import { activeMembership, isPlatformRoute } from "@/core/navigation/crmNav";
@@ -37,7 +36,6 @@ export default function CrmLayout() {
 
         <main className="min-h-0 min-w-0 flex-1 overflow-x-clip overflow-y-auto bg-[#f0f2f5] pt-14 md:pt-0">
           <div className="p-4 sm:p-6">
-            <CrmContextBanner />
             <Outlet />
           </div>
         </main>

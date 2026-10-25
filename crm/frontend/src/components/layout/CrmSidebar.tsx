@@ -1,10 +1,5 @@
 import { useClerk } from "@clerk/react";
-import {
-  Building2,
-  ChevronRight,
-  LayoutDashboard,
-  LogOut,
-} from "lucide-react";
+import { Building2, ChevronRight, LogOut } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { useAuthStore } from "@/core/auth/store";
@@ -133,21 +128,6 @@ export default function CrmSidebar({ mobileOpen = false, onMobileClose }: CrmSid
           )}
 
           {platformMode && !user?.is_platform_admin && null}
-
-          {platformMode && (
-            <NavLink
-              to="/app"
-              onClick={() => onMobileClose?.()}
-              className={() =>
-                `group mb-2 flex items-center gap-3 rounded-[0.3rem] px-3 py-2 text-xs text-[rgba(255,255,255,0.55)] hover:text-white`
-              }
-            >
-              <LayoutDashboard className="h-4 w-4 flex-shrink-0" />
-              <span className={isExpanded || mobileOpen ? "opacity-100" : "sr-only"}>
-                Ir al CRM de empresa
-              </span>
-            </NavLink>
-          )}
 
           {mainItems.map(renderItem)}
         </nav>
