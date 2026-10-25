@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import logging
 import tempfile
+import urllib.error
 import urllib.request
 from pathlib import Path
 
 from fpdf import FPDF
+
+logger = logging.getLogger(__name__)
 
 _EMPTY = "N/D"
 
@@ -21,6 +25,34 @@ def pdf_safe_text(value: object) -> str:
         .replace("\u201d", '"')
     )
     return text.encode("latin-1", errors="replace").decode("latin-1")
+
+
+def download_logo_file(logo_url: str) -> str | None:
+    """Descarga logo a archivo temporal para incrustar en PDF."""
+    if not logo_url or not logo_url.strip():
+        return None
+    lower = logo_url.lower()
+    if ".webp" in lower:
+        logger.warning("Logo WebP no soportado en PDF; sube PNG o JPG.")
+        return None
+    suffix = ".png"
+    if ".jpg" in lower or ".jpeg" in lower:
+        suffix = ".jpg"
+    try:
+        req = urllib.request.Request(
+            logo_url.strip(),
+            headers={"User-Agent": "SoftOne-CRM-PDF/1.0", "Accept": "image/*"},
+        )
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            data = resp.read()
+        if not data:
+            return None
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            tmp.write(data)
+            return tmp.name
+    except (urllib.error.URLError, OSError, TimeoutError) as exc:
+        logger.warning("No se pudo descargar logo %s: %s", logo_url[:80], exc)
+        return None
 
 
 class DocumentoPDF(FPDF):
@@ -49,21 +81,6 @@ class DocumentoPDF(FPDF):
         self.cell(0, 10, f"Pagina {self.page_no()}", align="C")
 
 
-def _download_logo(logo_url: str) -> str | None:
-    if not logo_url:
-        return None
-    try:
-        suffix = ".png"
-        lower = logo_url.lower()
-        if ".jpg" in lower or ".jpeg" in lower:
-            suffix = ".jpg"
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            urllib.request.urlretrieve(logo_url, tmp.name)
-            return tmp.name
-    except Exception:
-        return None
-
-
 def render_simple_pdf(
     title: str,
     sections: list[tuple[str, list[tuple[str, str]]]],
@@ -71,7 +88,7 @@ def render_simple_pdf(
     logo_url: str = "",
     empresa_subtitle: str = "",
 ) -> bytes:
-    logo_path = _download_logo(logo_url)
+    logo_path = download_logo_file(logo_url)
     pdf = DocumentoPDF()
     pdf.title_text = title
     pdf.empresa_subtitle = empresa_subtitle
@@ -88,8 +105,7 @@ def render_simple_pdf(
         pdf.set_font("Helvetica", "", 10)
         for label, value in rows:
             pdf.set_x(pdf.l_margin)
-            line = f"{pdf_safe_text(label)}: {pdf_safe_text(value)}"
-            pdf.multi_cell(pdf.epw, 6, line)
+            pdf.multi_cell(pdf.epw, 6, f"{pdf_safe_text(label)}: {pdf_safe_text(value)}")
         pdf.ln(2)
 
     out = bytes(pdf.output())
@@ -101,7 +117,7 @@ def render_simple_pdf(
     return out
 
 
-def pdf_http_response(data: bytes, filename: str, *, inline: bool = True) -> "HttpResponse":
+def pdf_http_response(data: bytes, filename: str, *, inline: bool = True):
     from django.http import HttpResponse
 
     safe = filename.replace('"', "").strip() or "documento.pdf"

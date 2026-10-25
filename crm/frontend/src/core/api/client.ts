@@ -55,16 +55,15 @@ export async function fetchPdfBlob(path: string): Promise<Blob> {
   return blob;
 }
 
-/** Abre el PDF en una pestaña nueva (ver, imprimir o guardar desde el visor del navegador). */
-export async function openPdfViewer(path: string, filename: string): Promise<void> {
+/** @deprecated Usar PdfDownloadButton + PdfViewerModal (sin descarga automatica). */
+export async function openPdfViewer(path: string, _filename: string): Promise<void> {
   const blob = await fetchPdfBlob(path);
   const pdfBlob = blob.type.includes("pdf") ? blob : new Blob([blob], { type: "application/pdf" });
   const objectUrl = URL.createObjectURL(pdfBlob);
   const opened = window.open(objectUrl, "_blank", "noopener,noreferrer");
   if (!opened) {
-    await downloadPdfFromBlob(pdfBlob, filename);
     URL.revokeObjectURL(objectUrl);
-    return;
+    throw new Error("No se pudo abrir el visor. Usa el boton Ver PDF en la aplicacion.");
   }
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), 120_000);
 }

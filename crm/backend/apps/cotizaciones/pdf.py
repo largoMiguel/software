@@ -3,11 +3,18 @@ from __future__ import annotations
 from apps.common.document_pdf import (
     CommercialDocumentPdf,
     DocumentLineRow,
-    DocumentParty,
     DocumentTotals,
     render_commercial_document_pdf,
 )
 from apps.cotizaciones.models import Cotizacion
+
+
+def _iva_etiqueta(cotizacion: Cotizacion) -> str:
+    item = cotizacion.items.first()
+    if item and item.iva_porcentaje:
+        pct = item.iva_porcentaje.normalize()
+        return f"IVA {pct}%"
+    return "IVA"
 
 
 def cotizacion_pdf_bytes(cotizacion: Cotizacion) -> bytes:
@@ -27,7 +34,7 @@ def cotizacion_pdf_bytes(cotizacion: Cotizacion) -> bytes:
         for item in cotizacion.items.all()
     ]
     doc = CommercialDocumentPdf(
-        tipo_titulo="COTIZACION",
+        document_kind="cotizacion",
         numero=cotizacion.numero,
         fecha_emision=str(cotizacion.fecha_emision),
         fecha_vencimiento=str(cotizacion.fecha_vencimiento) if cotizacion.fecha_vencimiento else None,
@@ -38,28 +45,18 @@ def cotizacion_pdf_bytes(cotizacion: Cotizacion) -> bytes:
         empresa_telefono=empresa.telefono or "",
         empresa_email=empresa.email or "",
         logo_url=empresa.logo_url or "",
-        emisor=DocumentParty(
-            titulo="Emisor",
-            lineas=[
-                empresa.nombre,
-                empresa.direccion or "N/D",
-                empresa.telefono or "",
-                empresa.email or "",
-            ],
-        ),
-        cliente=DocumentParty(
-            titulo="Cliente",
-            lineas=[
-                cliente.razon_social,
-                f"{cliente.tipo_documento.upper()} {cliente.documento}",
-            ],
-        ),
-        notas=cotizacion.notas or "",
+        cliente_nombre=cliente.razon_social,
+        cliente_documento=f"{cliente.tipo_documento.upper()} {cliente.documento}",
+        cliente_direccion=cliente.direccion or "",
+        cliente_email=cliente.email or "",
+        cliente_telefono=cliente.telefono or "",
+        condiciones=cotizacion.notas or "",
         filas=filas,
         totales=DocumentTotals(
             subtotal=cotizacion.subtotal,
             iva=cotizacion.iva_total,
             total=cotizacion.total,
+            iva_etiqueta=_iva_etiqueta(cotizacion),
         ),
     )
     return render_commercial_document_pdf(doc)

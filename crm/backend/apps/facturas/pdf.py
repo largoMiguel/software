@@ -3,11 +3,18 @@ from __future__ import annotations
 from apps.common.document_pdf import (
     CommercialDocumentPdf,
     DocumentLineRow,
-    DocumentParty,
     DocumentTotals,
     render_commercial_document_pdf,
 )
 from apps.facturas.models import Factura
+
+
+def _iva_etiqueta(factura: Factura) -> str:
+    item = factura.items.first()
+    if item and item.iva_porcentaje:
+        pct = item.iva_porcentaje.normalize()
+        return f"IVA {pct}%"
+    return "IVA"
 
 
 def factura_pdf_bytes(factura: Factura) -> bytes:
@@ -26,12 +33,8 @@ def factura_pdf_bytes(factura: Factura) -> bytes:
         )
         for item in factura.items.all()
     ]
-    notas = factura.notas or ""
-    extra = f"Pagado: ${factura.total_pagado:,.2f} · Saldo: ${factura.saldo_pendiente:,.2f}"
-    notas = f"{notas}\n\n{extra}".strip() if notas else extra
-
     doc = CommercialDocumentPdf(
-        tipo_titulo="FACTURA",
+        document_kind="factura",
         numero=factura.numero,
         fecha_emision=str(factura.fecha_emision),
         fecha_vencimiento=str(factura.fecha_vencimiento) if factura.fecha_vencimiento else None,
@@ -42,20 +45,22 @@ def factura_pdf_bytes(factura: Factura) -> bytes:
         empresa_telefono=empresa.telefono or "",
         empresa_email=empresa.email or "",
         logo_url=empresa.logo_url or "",
-        emisor=DocumentParty(
-            titulo="Emisor",
-            lineas=[empresa.nombre, empresa.direccion or "N/D", empresa.telefono or "", empresa.email or ""],
-        ),
-        cliente=DocumentParty(
-            titulo="Cliente",
-            lineas=[cliente.razon_social, f"{cliente.tipo_documento.upper()} {cliente.documento}"],
-        ),
-        notas=notas,
+        cliente_nombre=cliente.razon_social,
+        cliente_documento=f"{cliente.tipo_documento.upper()} {cliente.documento}",
+        cliente_direccion=cliente.direccion or "",
+        cliente_email=cliente.email or "",
+        cliente_telefono=cliente.telefono or "",
+        condiciones=factura.notas or "",
         filas=filas,
         totales=DocumentTotals(
             subtotal=factura.subtotal,
             iva=factura.iva_total,
             total=factura.total,
+            iva_etiqueta=_iva_etiqueta(factura),
         ),
+        extra_totales=[
+            ("Pagado", f"${factura.total_pagado:,.2f}"),
+            ("Saldo pendiente", f"${factura.saldo_pendiente:,.2f}"),
+        ],
     )
     return render_commercial_document_pdf(doc)
