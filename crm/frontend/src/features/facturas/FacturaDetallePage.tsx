@@ -3,7 +3,6 @@ import { Receipt } from "lucide-react";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
-  btnLink,
   btnPrimary,
   btnSecondary,
   inputClass,
