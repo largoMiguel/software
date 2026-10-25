@@ -21,11 +21,21 @@ cd deploy/scripts && ./sync-crm.sh softone-prod
 
 Documentación detallada de la app principal: [`public/README.md`](public/README.md).
 
-## SSH (tras renombrar la carpeta a `software`)
+## Renombrar repo en GitHub (`app-django` → `software`)
 
-Si usas `IdentityFile` en `~/.ssh/config`, actualiza la ruta del deploy key:
+En el navegador (más rápido): [Settings del repo](https://github.com/largoMiguel/app-django/settings) → **Repository name** → `software` → **Rename**.
 
-`…/software/public/deploy/keys/softone_deploy`
+Luego en local:
+
+```bash
+git remote set-url origin git@github.com:largoMiguel/software.git
+```
+
+O con GitHub CLI (después de `gh auth login`):
+
+```bash
+bash scripts/github-rename-to-software.sh
+```
 
 ## SSH (tras renombrar la carpeta a `software`)
 
