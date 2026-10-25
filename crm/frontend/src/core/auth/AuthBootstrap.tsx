@@ -26,15 +26,11 @@ export default function AuthBootstrap({ children }: { children: React.ReactNode 
         const me = await fetchMe();
         if (cancelled) return;
         setUser(me);
-        const ids = new Set(me.memberships.map((m) => m.empresa_id));
+        // Plataforma elige empresa en /app/platform/empresas (no via memberships en /me).
         if (me.is_platform_admin) {
-          if (activeEmpresaId && ids.has(activeEmpresaId)) {
-            setActiveEmpresaId(activeEmpresaId);
-          } else {
-            setActiveEmpresaId(null);
-          }
           return;
         }
+        const ids = new Set(me.memberships.map((m) => m.empresa_id));
         if (activeEmpresaId && ids.has(activeEmpresaId)) {
           setActiveEmpresaId(activeEmpresaId);
         } else if (me.memberships.length === 1) {
