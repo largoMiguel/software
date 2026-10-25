@@ -58,12 +58,21 @@ def asignar_numero_si_falta(factura: Factura) -> None:
     factura.save(update_fields=["numero"])
 
 
+def factura_vigente_para_cotizacion(cotizacion: Cotizacion) -> Factura | None:
+    return (
+        cotizacion.facturas.exclude(estado=Factura.EST_ANULADA)
+        .order_by("-created_at")
+        .first()
+    )
+
+
 @transaction.atomic
 def factura_desde_cotizacion(cotizacion: Cotizacion) -> Factura:
+    existing = factura_vigente_para_cotizacion(cotizacion)
+    if existing:
+        return existing
     if cotizacion.estado != Cotizacion.EST_ACEPTADA:
         raise ValueError("La cotización debe estar aceptada.")
-    if cotizacion.facturas.exclude(estado=Factura.EST_ANULADA).exists():
-        raise ValueError("Ya existe una factura para esta cotización.")
 
     factura = Factura.objects.create(
         empresa=cotizacion.empresa,

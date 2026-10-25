@@ -123,7 +123,9 @@ def pdf_http_response(data: bytes, filename: str, *, inline: bool = True):
     safe = filename.replace('"', "").strip() or "documento.pdf"
     if not safe.lower().endswith(".pdf"):
         safe = f"{safe}.pdf"
-    disposition = "inline" if inline else "attachment"
     response = HttpResponse(data, content_type="application/pdf")
-    response["Content-Disposition"] = f'{disposition}; filename="{safe}"'
+    if inline:
+        response["Content-Disposition"] = "inline"
+    else:
+        response["Content-Disposition"] = f'attachment; filename="{safe}"'
     return response

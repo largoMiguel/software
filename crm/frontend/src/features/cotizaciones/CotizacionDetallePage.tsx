@@ -29,6 +29,8 @@ type CotizacionDetail = {
   iva_total: string;
   total: string;
   items: CotizacionItemApi[];
+  factura_vigente_id?: number | null;
+  factura_vigente_numero?: string | null;
 };
 
 export default function CotizacionDetallePage() {
@@ -129,11 +131,16 @@ export default function CotizacionDetallePage() {
                 </button>
               </>
             )}
-            {data.estado === "aceptada" && (
-              <Link to={`/app/facturas?desde=${data.id}`} className={btnPrimary}>
-                Facturar
-              </Link>
-            )}
+            {data.estado === "aceptada" &&
+              (data.factura_vigente_id ? (
+                <Link to={`/app/facturas/${data.factura_vigente_id}`} className={btnPrimary}>
+                  {data.factura_vigente_numero ?? "Ver factura"}
+                </Link>
+              ) : (
+                <Link to={`/app/facturas?desde=${data.id}`} className={btnPrimary}>
+                  Facturar
+                </Link>
+              ))}
           </div>
         }
       />

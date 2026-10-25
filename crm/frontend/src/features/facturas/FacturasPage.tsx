@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Receipt } from "lucide-react";
 import { useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ConfirmDeleteDialog } from "@/components/ui/ConfirmDeleteDialog";
 import {
   btnLink,
@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/SoftOneUi";
 import { PdfDownloadButton } from "@/components/ui/PdfDownloadButton";
 import { api } from "@/core/api/client";
-import { paginatedParams, type Paginated } from "@/core/api/pagination";
+import { formatApiError, paginatedParams, type Paginated } from "@/core/api/pagination";
 import { useDebouncedValue } from "@/core/hooks/useDebouncedValue";
 import { useListPageSize } from "@/core/hooks/useListPageSize";
 
@@ -35,6 +35,7 @@ type Factura = {
 
 export default function FacturasPage() {
   const [params] = useSearchParams();
+  const navigate = useNavigate();
   const desde = params.get("desde");
   const qc = useQueryClient();
   const { pageSize, setPageSize, pageSizeOptions } = useListPageSize(25);
@@ -43,7 +44,19 @@ export default function FacturasPage() {
   const [page, setPage] = useState(1);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [pdfError, setPdfError] = useState<string | null>(null);
+  const [desdeError, setDesdeError] = useState<string | null>(null);
   const debouncedSearch = useDebouncedValue(search, 300);
+
+  const { data: facturaDesdeCotizacion } = useQuery({
+    queryKey: ["facturas", "cotizacion", desde],
+    enabled: Boolean(desde),
+    queryFn: async () => {
+      const { data: res } = await api.get<Paginated<Factura>>("/facturas/", {
+        params: paginatedParams({ page: 1, pageSize: 1, extra: { cotizacion: desde! } }),
+      });
+      return res.results[0] ?? null;
+    },
+  });
 
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ["facturas", debouncedSearch, estado, page, pageSize],
@@ -61,11 +74,18 @@ export default function FacturasPage() {
   });
 
   const desdeCotizacion = useMutation({
-    mutationFn: () => api.post(`/facturas/desde-cotizacion/${desde}/`),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["facturas"] });
-      window.history.replaceState({}, "", "/app/facturas");
+    mutationFn: async () => {
+      const { data: factura } = await api.post<Factura>(`/facturas/desde-cotizacion/${desde}/`);
+      return factura;
     },
+    onMutate: () => setDesdeError(null),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["facturas"] });
+      await qc.refetchQueries({ queryKey: ["facturas"] });
+      qc.invalidateQueries({ queryKey: ["cotizaciones"] });
+      navigate("/app/facturas", { replace: true });
+    },
+    onError: (err) => setDesdeError(formatApiError(err)),
   });
 
   const emitir = useMutation({
@@ -100,18 +120,41 @@ export default function FacturasPage() {
 
       {desde && (
         <div className="rounded-xl border border-[#3eafd4]/30 bg-[#f0fbff] p-4 text-sm text-[#0e7490]">
-          Crear factura desde cotización #{desde}
-          <button
-            type="button"
-            className={`${btnLink} ml-3`}
-            onClick={() => desdeCotizacion.mutate()}
-            disabled={desdeCotizacion.isPending}
-          >
-            Confirmar
-          </button>
+          {facturaDesdeCotizacion ? (
+            <>
+              Esta cotización ya tiene factura{" "}
+              <Link
+                to={`/app/facturas/${facturaDesdeCotizacion.id}`}
+                className="font-semibold underline"
+              >
+                {facturaDesdeCotizacion.numero}
+              </Link>
+              .
+              <button
+                type="button"
+                className={`${btnLink} ml-3`}
+                onClick={() => navigate("/app/facturas", { replace: true })}
+              >
+                Cerrar
+              </button>
+            </>
+          ) : (
+            <>
+              Crear factura desde cotización #{desde}
+              <button
+                type="button"
+                className={`${btnLink} ml-3`}
+                onClick={() => desdeCotizacion.mutate()}
+                disabled={desdeCotizacion.isPending}
+              >
+                {desdeCotizacion.isPending ? "Creando…" : "Confirmar"}
+              </button>
+            </>
+          )}
         </div>
       )}
 
+      {desdeError && <SoftOneAlert>{desdeError}</SoftOneAlert>}
       {pdfError && <SoftOneAlert>{pdfError}</SoftOneAlert>}
 
       <SoftOneToolbar>

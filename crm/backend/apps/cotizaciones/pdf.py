@@ -17,7 +17,7 @@ def _iva_etiqueta(cotizacion: Cotizacion) -> str:
     return "IVA"
 
 
-def cotizacion_pdf_bytes(cotizacion: Cotizacion) -> bytes:
+def cotizacion_pdf_bytes(cotizacion: Cotizacion, *, vendedor_nombre: str = "") -> bytes:
     empresa = cotizacion.empresa
     cliente = cotizacion.cliente
     filas = [
@@ -58,5 +58,6 @@ def cotizacion_pdf_bytes(cotizacion: Cotizacion) -> bytes:
             total=cotizacion.total,
             iva_etiqueta=_iva_etiqueta(cotizacion),
         ),
+        vendedor_nombre=vendedor_nombre,
     )
     return render_commercial_document_pdf(doc)

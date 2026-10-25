@@ -29,6 +29,8 @@ type Cotizacion = {
   estado: string;
   total: string;
   fecha_emision: string;
+  factura_vigente_id?: number | null;
+  factura_vigente_numero?: string | null;
 };
 
 const ESTADOS = ["", "borrador", "enviada", "aceptada", "rechazada", "vencida"];
@@ -173,6 +175,8 @@ export default function CotizacionesPage() {
                       id={c.id}
                       numero={c.numero}
                       estado={c.estado}
+                      facturaVigenteId={c.factura_vigente_id}
+                      facturaVigenteNumero={c.factura_vigente_numero}
                       onPdfError={setPdfError}
                       onDelete={() => setDeleteId(c.id)}
                       onEnviar={() => enviar.mutate(c.id)}

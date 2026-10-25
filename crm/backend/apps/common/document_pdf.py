@@ -73,6 +73,7 @@ class CommercialDocumentPdf:
     filas: Sequence[DocumentLineRow]
     totales: DocumentTotals
     extra_totales: list[tuple[str, str]] | None = None
+    vendedor_nombre: str = ""
 
 
 def _money(value: Decimal | float) -> str:
@@ -108,6 +109,37 @@ def _coral_line(pdf: FPDF, y: float) -> None:
     pdf.line(pdf.l_margin, y, pdf.w - pdf.r_margin, y)
 
 
+LOGO_BOX_MM = 24.0
+LOGO_TOP_MM = 14.0
+
+
+def _draw_logo(pdf: FPDF, logo_path: str | None, logo_x: float) -> float:
+    """Incrusta logo dentro de un cuadro fijo; devuelve Y inferior del encabezado."""
+    y = LOGO_TOP_MM
+    box = LOGO_BOX_MM
+    if logo_path:
+        try:
+            pdf.image(logo_path, x=logo_x, y=y, w=box, h=box, keep_aspect_ratio=True)
+        except Exception:
+            pdf.set_xy(logo_x, y)
+            pdf.set_fill_color(230, 230, 230)
+            pdf.rect(logo_x, y, box, box, style="F")
+            pdf.set_xy(logo_x, y + box / 2 - 3)
+            pdf.set_font("Helvetica", "", 8)
+            pdf.set_text_color(*COLOR_MUTED)
+            pdf.cell(box, 6, pdf_safe_text("LOGO"), align="C")
+    else:
+        pdf.set_xy(logo_x, y)
+        pdf.set_fill_color(241, 245, 249)
+        pdf.set_draw_color(*COLOR_MUTED)
+        pdf.rect(logo_x, y, box, box, style="DF")
+        pdf.set_xy(logo_x, y + box / 2 - 3)
+        pdf.set_font("Helvetica", "", 8)
+        pdf.set_text_color(*COLOR_MUTED)
+        pdf.cell(box, 6, pdf_safe_text("LOGO"), align="C")
+    return y + box
+
+
 def render_commercial_document_pdf(doc: CommercialDocumentPdf) -> bytes:
     pdf = _DocPDF(doc)
     pdf.set_auto_page_break(auto=True, margin=22)
@@ -121,93 +153,90 @@ def render_commercial_document_pdf(doc: CommercialDocumentPdf) -> bytes:
     pdf.set_text_color(*accent)
     pdf.cell(100, 10, pdf_safe_text(theme["title"]))
 
-    logo_x = pdf.w - pdf.r_margin - 38
-    if pdf.logo_path:
-        try:
-            pdf.image(pdf.logo_path, x=logo_x, y=12, w=36, h=36)
-        except Exception:
-            pdf.set_xy(logo_x, 18)
-            pdf.set_fill_color(230, 230, 230)
-            pdf.rect(logo_x, 14, 36, 36, style="F")
-            pdf.set_font("Helvetica", "", 8)
-            pdf.set_text_color(*COLOR_MUTED)
-            pdf.cell(36, 36, pdf_safe_text("LOGO"), align="C")
-    else:
-        pdf.set_xy(logo_x, 14)
-        pdf.set_fill_color(241, 245, 249)
-        pdf.set_draw_color(*COLOR_MUTED)
-        pdf.rect(logo_x, 14, 36, 36, style="DF")
-        pdf.set_xy(logo_x, 28)
-        pdf.set_font("Helvetica", "", 8)
-        pdf.set_text_color(*COLOR_MUTED)
-        pdf.cell(36, 6, pdf_safe_text("LOGO"), align="C")
+    logo_x = pdf.w - pdf.r_margin - LOGO_BOX_MM
+    logo_bottom = _draw_logo(pdf, pdf.logo_path, logo_x)
 
-    pdf.set_xy(pdf.l_margin, 28)
+    text_w = max(40.0, logo_x - pdf.l_margin - 4)
+    pdf.set_xy(pdf.l_margin, 26)
     pdf.set_font("Helvetica", "B", 11)
     pdf.set_text_color(*COLOR_TEXT)
-    pdf.cell(0, 5, pdf_safe_text(doc.empresa_nombre), ln=True)
+    pdf.multi_cell(text_w, 5, pdf_safe_text(doc.empresa_nombre))
+    pdf.set_x(pdf.l_margin)
     pdf.set_font("Helvetica", "", 9)
     if doc.empresa_direccion:
-        pdf.cell(0, 4.5, pdf_safe_text(doc.empresa_direccion), ln=True)
+        pdf.multi_cell(text_w, 4.5, pdf_safe_text(doc.empresa_direccion))
     nit_line = doc.empresa_nit and f"NIT {doc.empresa_nit}" or ""
     contact = " · ".join(x for x in [nit_line, doc.empresa_telefono, doc.empresa_email] if x)
     if contact:
-        pdf.cell(0, 4.5, pdf_safe_text(contact), ln=True)
+        pdf.set_x(pdf.l_margin)
+        pdf.multi_cell(text_w, 4.5, pdf_safe_text(contact))
 
-    pdf.ln(2)
-    _accent_line(pdf, accent)
-    pdf.ln(4)
+    header_bottom = max(pdf.get_y(), logo_bottom) + 3
+    pdf.set_y(header_bottom)
+    _accent_line(pdf, accent, y=header_bottom)
+    pdf.set_y(header_bottom + 5)
 
     pdf.set_font("Helvetica", "I", 8)
     pdf.set_text_color(*accent)
-    pdf.cell(0, 4, pdf_safe_text(theme["badge"]), ln=True)
+    pdf.set_x(pdf.l_margin)
+    pdf.multi_cell(pdf.epw, 4, pdf_safe_text(theme["badge"]))
     pdf.ln(2)
 
-    # --- Cliente + datos documento ---
+    # --- Cliente + datos documento (columnas sin solaparse) ---
+    epw = pdf.epw
+    left_w = epw * 0.52
+    meta_x = pdf.l_margin + left_w + 4
+    meta_label_w = 38
+    meta_value_w = epw - left_w - 4 - meta_label_w
     y0 = pdf.get_y()
-    col_left = 95
-    col_right = pdf.w - pdf.r_margin
 
     pdf.set_xy(pdf.l_margin, y0)
     pdf.set_font("Helvetica", "B", 9)
     pdf.set_text_color(*accent)
-    pdf.cell(col_left, 5, pdf_safe_text("FACTURAR A"))
+    pdf.cell(left_w, 5, pdf_safe_text("FACTURAR A"))
 
-    pdf.set_font("Helvetica", "B", 9)
     label_num = "N DE COTIZACION" if doc.document_kind == "cotizacion" else "N DE FACTURA"
-    pdf.set_xy(110, y0)
-    pdf.cell(40, 5, pdf_safe_text(label_num))
+    pdf.set_xy(meta_x, y0)
+    pdf.set_font("Helvetica", "B", 8)
+    pdf.set_text_color(*COLOR_MUTED)
+    pdf.cell(meta_label_w, 5, pdf_safe_text(label_num))
     pdf.set_font("Helvetica", "", 9)
     pdf.set_text_color(*COLOR_TEXT)
-    pdf.cell(0, 5, pdf_safe_text(doc.numero), ln=True)
+    pdf.cell(meta_value_w, 5, pdf_safe_text(doc.numero))
 
-    pdf.set_x(pdf.l_margin)
+    y_left = y0 + 6
+    pdf.set_xy(pdf.l_margin, y_left)
     pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(col_left, 5, pdf_safe_text(doc.cliente_nombre), ln=True)
+    pdf.set_text_color(*COLOR_TEXT)
+    pdf.multi_cell(left_w, 5, pdf_safe_text(doc.cliente_nombre))
+    pdf.set_x(pdf.l_margin)
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(col_left, 4.5, pdf_safe_text(doc.cliente_documento), ln=True)
+    pdf.multi_cell(left_w, 4.5, pdf_safe_text(doc.cliente_documento))
     if doc.cliente_direccion:
-        pdf.multi_cell(col_left, 4.5, pdf_safe_text(doc.cliente_direccion))
+        pdf.set_x(pdf.l_margin)
+        pdf.multi_cell(left_w, 4.5, pdf_safe_text(doc.cliente_direccion))
     client_contact = " · ".join(x for x in [doc.cliente_telefono, doc.cliente_email] if x)
     if client_contact:
-        pdf.multi_cell(col_left, 4.5, pdf_safe_text(client_contact))
+        pdf.set_x(pdf.l_margin)
+        pdf.multi_cell(left_w, 4.5, pdf_safe_text(client_contact))
+    y_left_end = pdf.get_y()
 
-    y_meta = y0 + 5
+    y_meta = y0 + 6
     for label, value in (
         ("FECHA", doc.fecha_emision),
         ("VENCIMIENTO", doc.fecha_vencimiento or "N/D"),
         ("ESTADO", doc.estado),
     ):
-        pdf.set_xy(110, y_meta)
+        pdf.set_xy(meta_x, y_meta)
         pdf.set_font("Helvetica", "B", 8)
         pdf.set_text_color(*COLOR_MUTED)
-        pdf.cell(40, 4.5, pdf_safe_text(label))
+        pdf.cell(meta_label_w, 4.5, pdf_safe_text(label))
         pdf.set_font("Helvetica", "", 9)
         pdf.set_text_color(*COLOR_TEXT)
-        pdf.cell(0, 4.5, pdf_safe_text(value), ln=False)
-        y_meta += 5
+        pdf.multi_cell(meta_value_w, 4.5, pdf_safe_text(value))
+        y_meta = pdf.get_y() + 0.5
 
-    pdf.set_y(max(pdf.get_y(), y_meta) + 6)
+    pdf.set_y(max(y_left_end, y_meta) + 6)
 
     # --- Tabla ---
     y_table = pdf.get_y()
@@ -217,7 +246,7 @@ def render_commercial_document_pdf(doc: CommercialDocumentPdf) -> bytes:
     pdf.ln(2)
 
     headers = ["CANT.", "DESCRIPCION", "PRECIO UNITARIO", "IMPORTE"]
-    widths = [16, 92, 38, 38]
+    widths = [epw * 0.09, epw * 0.49, epw * 0.21, epw * 0.21]
     pdf.set_font("Helvetica", "B", 9)
     pdf.set_text_color(*accent)
     for h, w in zip(headers, widths):
@@ -229,16 +258,25 @@ def render_commercial_document_pdf(doc: CommercialDocumentPdf) -> bytes:
     pdf.set_font("Helvetica", "", 9)
     pdf.set_text_color(*COLOR_TEXT)
     if not doc.filas:
-        pdf.cell(0, 6, pdf_safe_text("Sin lineas"), ln=True)
+        pdf.set_x(pdf.l_margin)
+        pdf.cell(epw, 6, pdf_safe_text("Sin lineas"), ln=True)
     for row in doc.filas:
-        pdf.cell(widths[0], 6, pdf_safe_text(f"{row.cantidad:.2f}"), align="R")
         desc = row.descripcion
         if row.descuento_porcentaje and row.descuento_porcentaje > 0:
             desc += f" (Dto {row.descuento_porcentaje:.0f}%)"
-        pdf.cell(widths[1], 6, pdf_safe_text(desc[:70]))
-        pdf.cell(widths[2], 6, pdf_safe_text(_money(row.precio_unitario)), align="R")
-        pdf.cell(widths[3], 6, pdf_safe_text(_money(row.total_linea)), align="R")
-        pdf.ln(6)
+        x0 = pdf.l_margin
+        y0 = pdf.get_y()
+        line_h = 5
+        pdf.set_xy(x0 + widths[0], y0)
+        pdf.multi_cell(widths[1], line_h, pdf_safe_text(desc))
+        row_h = max(6.0, pdf.get_y() - y0)
+        pdf.set_xy(x0, y0)
+        pdf.cell(widths[0], row_h, pdf_safe_text(f"{row.cantidad:.2f}"), align="R")
+        pdf.set_xy(x0 + widths[0] + widths[1], y0)
+        pdf.cell(widths[2], row_h, pdf_safe_text(_money(row.precio_unitario)), align="R")
+        pdf.set_xy(x0 + widths[0] + widths[1] + widths[2], y0)
+        pdf.cell(widths[3], row_h, pdf_safe_text(_money(row.total_linea)), align="R")
+        pdf.set_y(y0 + row_h)
 
     pdf.ln(4)
     _coral_line(pdf, pdf.get_y())
@@ -275,12 +313,14 @@ def render_commercial_document_pdf(doc: CommercialDocumentPdf) -> bytes:
     if pdf.get_y() > pdf.h - 55:
         pdf.add_page()
 
-    sig_w = (pdf.w - 20 - 8) / 2
+    sig_w = (epw - 8) / 2
     y_sig = pdf.get_y()
+    cliente_sub = " · ".join(x for x in [doc.cliente_nombre, doc.cliente_documento] if x)
+    vendedor_sub = doc.vendedor_nombre.strip() or "Vendedor"
     for idx, (titulo, subtitulo) in enumerate(
         (
-            ("Firma del cliente", "Nombre y documento"),
-            ("Firma del vendedor", "Nombre y cargo"),
+            ("Firma del cliente", cliente_sub),
+            ("Firma del vendedor", vendedor_sub),
         )
     ):
         x = pdf.l_margin + idx * (sig_w + 8)
@@ -289,11 +329,12 @@ def render_commercial_document_pdf(doc: CommercialDocumentPdf) -> bytes:
         pdf.line(x, y_sig + 22, x + sig_w, y_sig + 22)
         pdf.set_xy(x, y_sig + 24)
         pdf.set_font("Helvetica", "B", 9)
+        pdf.set_text_color(*COLOR_TEXT)
         pdf.cell(sig_w, 5, pdf_safe_text(titulo))
         pdf.set_xy(x, y_sig + 29)
         pdf.set_font("Helvetica", "", 8)
         pdf.set_text_color(*COLOR_MUTED)
-        pdf.cell(sig_w, 4, pdf_safe_text(subtitulo))
+        pdf.multi_cell(sig_w, 4, pdf_safe_text(subtitulo))
 
     pdf.set_text_color(*COLOR_TEXT)
     pdf.set_y(y_sig + 38)

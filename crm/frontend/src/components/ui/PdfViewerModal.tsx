@@ -1,15 +1,17 @@
-import { Printer, X } from "lucide-react";
-import { useEffect } from "react";
-import { btnPrimary, btnSecondary } from "@/components/ui/SoftOneUi";
+import { X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 type Props = {
   open: boolean;
   title: string;
-  objectUrl: string | null;
+  pdfBlob: Blob | null;
   onClose: () => void;
 };
 
-export function PdfViewerModal({ open, title, objectUrl, onClose }: Props) {
+export function PdfViewerModal({ open, title, pdfBlob, onClose }: Props) {
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
+  const objectUrlRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
@@ -19,37 +21,53 @@ export function PdfViewerModal({ open, title, objectUrl, onClose }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  if (!open || !objectUrl) return null;
+  useEffect(() => {
+    if (!open || !pdfBlob) {
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
+      }
+      setObjectUrl(null);
+      return;
+    }
 
-  function printPdf() {
-    const frame = document.getElementById("crm-pdf-viewer-frame") as HTMLIFrameElement | null;
-    frame?.contentWindow?.print();
-  }
+    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+    const url = URL.createObjectURL(pdfBlob);
+    objectUrlRef.current = url;
+    setObjectUrl(url);
+
+    return () => {
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
+      }
+    };
+  }, [open, pdfBlob]);
+
+  if (!open || !pdfBlob || !objectUrl) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-slate-900/70 p-3 sm:p-6">
-      <div className="mx-auto flex h-full w-full max-w-5xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
-          <div>
-            <p className="text-sm font-semibold text-slate-800">{title}</p>
-            <p className="text-xs text-slate-500">Vista previa · imprime o guarda desde el visor del navegador</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button type="button" className={btnSecondary} onClick={printPdf}>
-              <Printer className="h-4 w-4" />
-              Imprimir
-            </button>
-            <button type="button" className={btnPrimary} onClick={onClose}>
-              <X className="h-4 w-4" />
-              Cerrar
-            </button>
-          </div>
-        </div>
-        <iframe
-          id="crm-pdf-viewer-frame"
-          title={title}
+    <div
+      className="fixed inset-0 z-[100] flex flex-col bg-slate-900/75 p-2 sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+    >
+      <div className="relative mx-auto flex h-full w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-slate-800 shadow-2xl">
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm transition hover:bg-black/60"
+          title="Cerrar"
+          aria-label="Cerrar visor"
+        >
+          <X className="h-4 w-4" />
+        </button>
+        <embed
           src={objectUrl}
-          className="min-h-0 flex-1 w-full border-0 bg-slate-100"
+          type="application/pdf"
+          title={title}
+          className="h-full min-h-0 w-full flex-1 border-0 bg-slate-700"
         />
       </div>
     </div>

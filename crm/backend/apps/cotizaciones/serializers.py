@@ -6,6 +6,7 @@ from rest_framework import serializers
 from apps.clientes.models import Cliente
 from apps.catalogo.models import Producto
 from apps.cotizaciones.models import Cotizacion, CotizacionItem
+from apps.facturas.models import Factura
 from apps.empresas.consecutivos import siguiente_numero
 from apps.empresas.models import Consecutivo
 from apps.cotizaciones.services import recalcular_cotizacion
@@ -42,6 +43,8 @@ class CotizacionSerializer(serializers.ModelSerializer):
     items = CotizacionItemSerializer(many=True)
     cliente_id = serializers.PrimaryKeyRelatedField(source="cliente", queryset=Cliente.objects.all())
     cliente_nombre = serializers.CharField(source="cliente.razon_social", read_only=True)
+    factura_vigente_id = serializers.SerializerMethodField()
+    factura_vigente_numero = serializers.SerializerMethodField()
 
     class Meta:
         model = Cotizacion
@@ -50,6 +53,8 @@ class CotizacionSerializer(serializers.ModelSerializer):
             "numero",
             "cliente_id",
             "cliente_nombre",
+            "factura_vigente_id",
+            "factura_vigente_numero",
             "estado",
             "fecha_emision",
             "fecha_vencimiento",
@@ -75,6 +80,18 @@ class CotizacionSerializer(serializers.ModelSerializer):
             "fecha_vencimiento": {"required": False},
             "notas": {"required": False},
         }
+
+    def get_factura_vigente_id(self, obj: Cotizacion) -> int | None:
+        factura = (
+            obj.facturas.exclude(estado=Factura.EST_ANULADA).order_by("-created_at").first()
+        )
+        return factura.pk if factura else None
+
+    def get_factura_vigente_numero(self, obj: Cotizacion) -> str | None:
+        factura = (
+            obj.facturas.exclude(estado=Factura.EST_ANULADA).order_by("-created_at").first()
+        )
+        return factura.numero if factura else None
 
     def validate_items(self, items):
         if not items:

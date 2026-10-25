@@ -12,6 +12,8 @@ type Props = {
   id: number;
   numero: string;
   estado: string;
+  facturaVigenteId?: number | null;
+  facturaVigenteNumero?: string | null;
   onPdfError: (msg: string) => void;
   onDelete: () => void;
   onEnviar: () => void;
@@ -30,6 +32,8 @@ export function CotizacionRowActions({
   onAceptar,
   onRechazar,
   enviarPending,
+  facturaVigenteId,
+  facturaVigenteNumero,
 }: Props) {
   return (
     <div className="flex flex-wrap justify-end gap-1.5">
@@ -90,16 +94,26 @@ export function CotizacionRowActions({
           </button>
         </>
       )}
-      {estado === "aceptada" && (
-        <Link
-          to={`/app/facturas?desde=${id}`}
-          className={btnActionPrimary}
-          title="Crear factura desde esta cotizacion"
-        >
-          <Receipt className="h-3.5 w-3.5" />
-          Facturar
-        </Link>
-      )}
+      {estado === "aceptada" &&
+        (facturaVigenteId ? (
+          <Link
+            to={`/app/facturas/${facturaVigenteId}`}
+            className={btnActionPrimary}
+            title="Ver factura generada"
+          >
+            <Receipt className="h-3.5 w-3.5" />
+            {facturaVigenteNumero ?? "Factura"}
+          </Link>
+        ) : (
+          <Link
+            to={`/app/facturas?desde=${id}`}
+            className={btnActionPrimary}
+            title="Crear factura desde esta cotizacion"
+          >
+            <Receipt className="h-3.5 w-3.5" />
+            Facturar
+          </Link>
+        ))}
     </div>
   );
 }

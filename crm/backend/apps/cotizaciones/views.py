@@ -8,6 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.common.pdf import pdf_http_response
+from apps.common.pdf_context import vendedor_display_name
 from apps.cotizaciones.models import Cotizacion
 from apps.cotizaciones.pdf import cotizacion_pdf_bytes
 from apps.cotizaciones.serializers import CotizacionSerializer
@@ -68,7 +69,7 @@ class CotizacionViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
         cot = self.get_object()
         recalcular_cotizacion(cot)
         try:
-            data = cotizacion_pdf_bytes(cot)
+            data = cotizacion_pdf_bytes(cot, vendedor_nombre=vendedor_display_name(request.user))
         except Exception:
             logging.getLogger(__name__).exception("PDF cotizacion %s", cot.pk)
             return Response(

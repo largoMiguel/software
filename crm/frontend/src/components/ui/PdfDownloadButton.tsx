@@ -22,15 +22,12 @@ export function PdfDownloadButton({
   onError,
 }: Props) {
   const [pending, setPending] = useState(false);
-  const [viewerUrl, setViewerUrl] = useState<string | null>(null);
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [viewerOpen, setViewerOpen] = useState(false);
 
   function closeViewer() {
     setViewerOpen(false);
-    setViewerUrl((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return null;
-    });
+    setPdfBlob(null);
   }
 
   return (
@@ -44,9 +41,9 @@ export function PdfDownloadButton({
           setPending(true);
           try {
             const blob = await fetchPdfBlob(path);
-            const pdfBlob = blob.type.includes("pdf") ? blob : new Blob([blob], { type: "application/pdf" });
-            const url = URL.createObjectURL(pdfBlob);
-            setViewerUrl(url);
+            const normalized =
+              blob.type.includes("pdf") ? blob : new Blob([blob], { type: "application/pdf" });
+            setPdfBlob(normalized);
             setViewerOpen(true);
           } catch (e) {
             const msg = e instanceof Error ? e.message : "No se pudo abrir el PDF";
@@ -62,7 +59,7 @@ export function PdfDownloadButton({
       <PdfViewerModal
         open={viewerOpen}
         title={filename.replace(/\.pdf$/i, "")}
-        objectUrl={viewerUrl}
+        pdfBlob={pdfBlob}
         onClose={closeViewer}
       />
     </>

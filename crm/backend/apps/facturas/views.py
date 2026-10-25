@@ -8,6 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.common.pdf import pdf_http_response
+from apps.common.pdf_context import vendedor_display_name
 from apps.cotizaciones.models import Cotizacion
 from apps.facturas.models import Factura
 from apps.facturas.pdf import factura_pdf_bytes
@@ -22,7 +23,7 @@ class FacturaViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsTenantOperator]
     queryset = Factura.objects.select_related("cliente", "cotizacion").prefetch_related("items", "pagos")
     search_fields = ("numero", "cliente__razon_social")
-    filterset_fields = ("estado", "cliente")
+    filterset_fields = ("estado", "cliente", "cotizacion")
     ordering_fields = ("fecha_emision", "total", "created_at")
 
     def get_serializer_context(self):
@@ -75,7 +76,7 @@ class FacturaViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
         factura = self.get_object()
         recalcular_factura(factura)
         try:
-            data = factura_pdf_bytes(factura)
+            data = factura_pdf_bytes(factura, vendedor_nombre=vendedor_display_name(request.user))
         except Exception:
             logging.getLogger(__name__).exception("PDF factura %s", factura.pk)
             return Response(

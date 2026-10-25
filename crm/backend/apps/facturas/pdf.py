@@ -17,7 +17,7 @@ def _iva_etiqueta(factura: Factura) -> str:
     return "IVA"
 
 
-def factura_pdf_bytes(factura: Factura) -> bytes:
+def factura_pdf_bytes(factura: Factura, *, vendedor_nombre: str = "") -> bytes:
     empresa = factura.empresa
     cliente = factura.cliente
     filas = [
@@ -62,5 +62,6 @@ def factura_pdf_bytes(factura: Factura) -> bytes:
             ("Pagado", f"${factura.total_pagado:,.2f}"),
             ("Saldo pendiente", f"${factura.saldo_pendiente:,.2f}"),
         ],
+        vendedor_nombre=vendedor_nombre,
     )
     return render_commercial_document_pdf(doc)
