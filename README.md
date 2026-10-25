@@ -20,3 +20,15 @@ cd deploy/scripts && ./sync-crm.sh softone-prod
 ```
 
 Documentación detallada de la app principal: [`public/README.md`](public/README.md).
+
+## SSH (tras renombrar la carpeta a `software`)
+
+Si usas `IdentityFile` en `~/.ssh/config`, actualiza la ruta del deploy key:
+
+`…/software/public/deploy/keys/softone_deploy`
+
+## SSH (tras renombrar la carpeta a `software`)
+
+Si usas `IdentityFile` en `~/.ssh/config`, actualiza la ruta del deploy key:
+
+`…/software/public/deploy/keys/softone_deploy`

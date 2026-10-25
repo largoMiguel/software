@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Receipt } from "lucide-react";
 import { useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import {
   btnLink,
   btnPrimary,
@@ -47,7 +47,6 @@ type FacturaDetail = {
 export default function FacturaDetallePage() {
   const { id } = useParams<{ id: string }>();
   const facturaId = Number(id);
-  const navigate = useNavigate();
   const qc = useQueryClient();
   const [pagoForm, setPagoForm] = useState({ fecha: "", monto: "", metodo: "", referencia: "" });
   const [pagoError, setPagoError] = useState<string | null>(null);
