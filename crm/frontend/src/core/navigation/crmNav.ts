@@ -16,6 +16,13 @@ export const ROL_LABELS: Record<string, string> = {
   vendedor: "Vendedor",
 };
 
+/** Texto corto para la pantalla de miembros del tenant. */
+export const ROL_DESCRIPTIONS: Record<string, string> = {
+  owner: "Control total: empresa, miembros y operación comercial.",
+  admin: "Configura la empresa e invita miembros; opera el CRM.",
+  vendedor: "Clientes, cotizaciones y facturas; sin gestión de miembros.",
+};
+
 export type CrmNavItem = {
   to: string;
   label: string;

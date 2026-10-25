@@ -24,7 +24,8 @@ def apply_request_empresa_context(request, user) -> None:
         if not empresa:
             raise PermissionDenied("Empresa no encontrada o inactiva.")
         request.empresa = empresa
-        request.membresia = Membresia.objects.filter(user=user, empresa=empresa).first()
+        # Superadmin opera el tenant por contexto de plataforma, no como miembro del equipo.
+        request.membresia = None
         return
 
     membresia = (

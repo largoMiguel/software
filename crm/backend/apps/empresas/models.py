@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.text import slugify
 
@@ -64,6 +65,12 @@ class Membresia(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user.email} @ {self.empresa.nombre} ({self.rol})"
+
+    def clean(self) -> None:
+        if self.user_id and getattr(self.user, "is_platform_admin", False):
+            raise ValidationError(
+                "Las cuentas de administración de plataforma no pueden ser miembros de una empresa."
+            )
 
 
 class Consecutivo(models.Model):

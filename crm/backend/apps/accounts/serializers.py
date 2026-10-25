@@ -18,7 +18,7 @@ class MembresiaBriefSerializer(serializers.ModelSerializer):
 
 
 class MeSerializer(serializers.ModelSerializer):
-    memberships = MembresiaBriefSerializer(source="membresias", many=True, read_only=True)
+    memberships = serializers.SerializerMethodField()
     active_empresa_id = serializers.SerializerMethodField()
 
     class Meta:
@@ -31,6 +31,12 @@ class MeSerializer(serializers.ModelSerializer):
             "memberships",
             "active_empresa_id",
         )
+
+    def get_memberships(self, obj):
+        if obj.is_platform_admin:
+            return []
+        qs = obj.membresias.select_related("empresa").order_by("empresa__nombre")
+        return MembresiaBriefSerializer(qs, many=True).data
 
     def get_active_empresa_id(self, obj):
         request = self.context.get("request")

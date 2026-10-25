@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from apps.accounts.services.clerk import ClerkServiceError, invite_user_to_clerk
+from apps.empresas.membership_policy import assert_user_email_may_be_invited, assert_user_may_be_team_member
 from apps.empresas.models import Empresa, Membresia
 
 User = get_user_model()
@@ -22,7 +23,9 @@ class PlatformEmpresaCreateSerializer(serializers.ModelSerializer):
         fields = ("nombre", "nit", "admin_email", "admin_full_name")
 
     def validate_admin_email(self, value: str) -> str:
-        return value.strip().lower()
+        email = value.strip().lower()
+        assert_user_email_may_be_invited(email)
+        return email
 
     def create(self, validated_data):
         admin_email = validated_data.pop("admin_email")
@@ -32,6 +35,7 @@ class PlatformEmpresaCreateSerializer(serializers.ModelSerializer):
             email=admin_email,
             defaults={"full_name": admin_name, "is_active": True},
         )
+        assert_user_may_be_team_member(user)
         if admin_name and not user.full_name:
             user.full_name = admin_name
             user.save(update_fields=["full_name"])
@@ -80,7 +84,9 @@ class InvitarMiembroSerializer(serializers.Serializer):
     rol = serializers.ChoiceField(choices=Membresia.ROL_CHOICES, default=Membresia.ROL_VENDEDOR)
 
     def validate_email(self, value):
-        return value.strip().lower()
+        email = value.strip().lower()
+        assert_user_email_may_be_invited(email)
+        return email
 
     def create(self, validated_data):
         request = self.context["request"]
@@ -93,6 +99,7 @@ class InvitarMiembroSerializer(serializers.Serializer):
             email=email,
             defaults={"full_name": full_name, "is_active": True},
         )
+        assert_user_may_be_team_member(user)
         if full_name and not user.full_name:
             user.full_name = full_name
             user.save(update_fields=["full_name"])

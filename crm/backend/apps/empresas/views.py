@@ -13,6 +13,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.tenancy import require_empresa
+from apps.empresas.membership_policy import (
+    assert_keeps_at_least_one_admin,
+    assert_user_may_be_team_member,
+    team_membresias_for_empresa,
+)
 from apps.empresas.models import Empresa, Membresia
 from apps.common.b2_client import upload_public_object
 from apps.cotizaciones.models import Cotizacion
@@ -141,7 +146,7 @@ class MembresiaViewSet(
 
     def get_queryset(self):
         empresa = require_empresa(self.request)
-        return Membresia.objects.select_related("user").filter(empresa=empresa).order_by("-created_at")
+        return team_membresias_for_empresa(empresa).order_by("-created_at")
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -154,12 +159,21 @@ class MembresiaViewSet(
         membresia = serializer.save()
         return Response(MembresiaSerializer(membresia).data, status=status.HTTP_201_CREATED)
 
+    def perform_destroy(self, instance):
+        assert_user_may_be_team_member(instance.user)
+        if instance.rol in Membresia.ADMIN_ROLES:
+            assert_keeps_at_least_one_admin(instance.empresa, exclude_membresia_id=instance.pk)
+        instance.delete()
+
     @action(detail=True, methods=["patch"], url_path="rol")
     def cambiar_rol(self, request, pk=None):
         membresia = self.get_object()
+        assert_user_may_be_team_member(membresia.user)
         rol = request.data.get("rol")
         if rol not in dict(Membresia.ROL_CHOICES):
             return Response({"detail": "Rol inválido."}, status=status.HTTP_400_BAD_REQUEST)
+        if membresia.rol in Membresia.ADMIN_ROLES and rol not in Membresia.ADMIN_ROLES:
+            assert_keeps_at_least_one_admin(membresia.empresa, exclude_membresia_id=membresia.pk)
         membresia.rol = rol
         membresia.save(update_fields=["rol"])
         return Response(MembresiaSerializer(membresia).data)

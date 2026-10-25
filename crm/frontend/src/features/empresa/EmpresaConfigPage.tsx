@@ -16,7 +16,8 @@ import {
   SoftOneTable,
   SoftOneTableHead,
 } from "@/components/ui/SoftOneUi";
-import { ROL_LABELS } from "@/core/navigation/crmNav";
+import { useAuthStore } from "@/core/auth/store";
+import { ROL_DESCRIPTIONS, ROL_LABELS } from "@/core/navigation/crmNav";
 import { api } from "@/core/api/client";
 import { formatApiError } from "@/core/api/pagination";
 
@@ -49,6 +50,7 @@ const FIELD_LABELS: Record<keyof Omit<Empresa, "logo_url">, string> = {
 };
 
 export default function EmpresaConfigPage() {
+  const isPlatformAdmin = useAuthStore((s) => s.user?.is_platform_admin);
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [logoError, setLogoError] = useState<string | null>(null);
@@ -95,6 +97,13 @@ export default function EmpresaConfigPage() {
         subtitle="Datos fiscales, prefijos, logo e invitaciones"
         icon={Settings}
       />
+
+      {isPlatformAdmin && (
+        <SoftOneAlert variant="info">
+          Estás en modo <strong>plataforma SoftOne</strong>: puedes ajustar esta empresa cliente, pero tu cuenta no
+          forma parte de su equipo ni aparece como miembro.
+        </SoftOneAlert>
+      )}
 
       <SoftOneCard title="Datos de la empresa" className="max-w-2xl">
         <div className="mb-4 flex flex-wrap items-center gap-4">
@@ -202,7 +211,13 @@ function InvitarMiembroSection() {
   const list = Array.isArray(membresias) ? membresias : [];
 
   return (
-    <SoftOneCard title="Miembros del equipo" icon={<UserPlus className="h-4 w-4 text-[#3eafd4]" />}>
+    <SoftOneCard
+      title="Miembros del equipo"
+      icon={<UserPlus className="h-4 w-4 text-[#3eafd4]" />}
+    >
+      <p className="mb-4 text-sm text-slate-600">
+        Solo usuarios del cliente. Las cuentas de administración de plataforma SoftOne no pueden invitarse aquí.
+      </p>
       <form
         className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:items-end"
         onSubmit={(e) => {
@@ -224,15 +239,18 @@ function InvitarMiembroSection() {
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
         />
-        <select className={selectClass} value={rol} onChange={(e) => setRol(e.target.value)}>
-          <option value="admin">Administrador</option>
-          <option value="vendedor">Vendedor</option>
-          <option value="owner">Propietario</option>
+        <select className={selectClass} value={rol} onChange={(e) => setRol(e.target.value)} aria-describedby="rol-invite-help">
+          <option value="vendedor">{ROL_LABELS.vendedor}</option>
+          <option value="admin">{ROL_LABELS.admin}</option>
+          <option value="owner">{ROL_LABELS.owner}</option>
         </select>
         <button type="submit" className={btnPrimary} disabled={invite.isPending || !email}>
           Invitar
         </button>
       </form>
+      <p id="rol-invite-help" className="-mt-4 mb-6 text-xs text-slate-500">
+        {ROL_DESCRIPTIONS[rol] ?? ""}
+      </p>
 
       {isLoading ? (
         <SoftOneLoading label="Cargando miembros…" />
@@ -253,12 +271,13 @@ function InvitarMiembroSection() {
                   <select
                     className={`${selectClass} !py-1 text-sm`}
                     value={m.rol}
+                    title={ROL_DESCRIPTIONS[m.rol]}
                     onChange={(e) => changeRol.mutate({ id: m.id, rol: e.target.value })}
                     disabled={changeRol.isPending}
                   >
-                    <option value="owner">{ROL_LABELS.owner}</option>
-                    <option value="admin">{ROL_LABELS.admin}</option>
                     <option value="vendedor">{ROL_LABELS.vendedor}</option>
+                    <option value="admin">{ROL_LABELS.admin}</option>
+                    <option value="owner">{ROL_LABELS.owner}</option>
                   </select>
                 </td>
                 <td className="px-4 py-3 text-right">
