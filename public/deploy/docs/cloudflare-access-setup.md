@@ -1,6 +1,6 @@
 # Configuración Cloudflare Access para SSH remoto
 
-Repositorio: `git@github.com:largoMiguel/app-django.git`
+Repositorio: `git@github.com:largoMiguel/software.git` (código app en `public/`)
 
 ## Estado configurado en el servidor
 

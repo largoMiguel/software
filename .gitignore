@@ -41,6 +41,7 @@ logs/
 # Local venv at repo root
 venv/
 
-# Cursor / agent skills (solo local, no subir al repo)
+# Cursor / IDE local
+.cursor/
 .agents/
 skills-lock.json

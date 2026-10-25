@@ -1,24 +1,21 @@
 # SoftOne Software
 
-Monorepo de productos SoftOne.
+Monorepo en [github.com/largoMiguel/software](https://github.com/largoMiguel/software).
 
 | Carpeta | Producto |
 |---------|----------|
-| [`public/`](public/) | App principal (app / demo.softone360.com) — `backend`, `frontend`, `deploy` |
-| [`crm/`](crm/) | SoftOne CRM (crm.softone360.com) |
+| [`public/`](public/) | App principal — https://app.softone360.com / https://demo.softone360.com |
+| [`crm/`](crm/) | SoftOne CRM — https://crm.softone360.com |
 
-## Desarrollo rápido
+## Comandos habituales
 
 ```bash
-# App principal
-cd public && cp .env.example .env   # editar
-cd deploy && docker compose -f docker-compose.prod.yml ...
+# Sync demo (rama development)
+cd public && deploy/scripts/sync-demo.sh softone-prod
 
-# CRM
-cd crm && cp .env.example .env
-cd deploy/scripts && ./sync-crm.sh softone-prod
+# Sync CRM
+cd crm && deploy/scripts/sync-crm.sh softone-prod
 ```
 
-Documentación detallada de la app principal: [`public/README.md`](public/README.md).
-
-Deploy key SSH: `public/deploy/keys/softone_deploy`
+Documentación de la app principal: [`public/README.md`](public/README.md).  
+CRM: [`crm/README.md`](crm/README.md).

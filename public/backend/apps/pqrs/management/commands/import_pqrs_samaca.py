@@ -96,7 +96,7 @@ def should_assign(orig: dict, dest_estado: str) -> bool:
 
 
 class Command(BaseCommand):
-    help = "Importa PQRS de Samacá desde export JSON (AWS softone360 → app_django)."
+    help = "Importa PQRS de Samacá desde export JSON (export AWS → repo software/public)."
 
     def add_arguments(self, parser):
         parser.add_argument(

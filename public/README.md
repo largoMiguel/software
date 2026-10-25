@@ -262,7 +262,7 @@ Un mismo **código de producto MGA** (7 dígitos, p. ej. `4003018`) puede tener 
 | `codigo_indicador_producto_mga` | Código del indicador (9 dígitos). |
 | `codigo_indicador_producto` | Código SisPT (`IP-35`, …); desempate cuando el indicador MGA se repite. |
 
-Tras actualizar el backend, **recargar el Excel** del Plan Indicativo para materializar todas las filas. Ver [README_MAIN.md](README_MAIN.md) para despliegue a producción.
+Tras actualizar el backend, **recargar el Excel** del Plan Indicativo para materializar todas las filas. Para despliegue, ver la sección [Despliegue](#despliegue-producción--demo-en-paralelo).
 
 ---
 
@@ -641,7 +641,7 @@ Superadmin → Entidad → Módulos: activar **Gestión documental** (`enable_ge
 
 Ruta frontend: `/gestion-documental` (Resumen · Instrumentos · Clasificación · Expedientes · Inventario FUID · Transferencias · Informes).
 
-**Demo:** disponible tras push a `development`. **Prod:** ver [README_MAIN.md](README_MAIN.md) (bucket dedicado + worker).
+**Demo:** disponible tras push a `development`. **Prod:** desplegar desde `main` (bucket `softone-document-management` + worker en `deploy/`).
 
 ---
 
@@ -938,7 +938,7 @@ Para invitaciones, nombres y acceso restringido:
 
 ## Despliegue: producción + demo en paralelo
 
-Repositorio: **git@github.com:largoMiguel/app-django.git**
+Repositorio: **git@github.com:largoMiguel/software.git** (app en `public/`)
 
 | Entorno | Rama | URL | Ruta servidor | LAN |
 |---|---|---|---|---|
@@ -970,12 +970,12 @@ main (commit + push) → sync + deploy → app.softone360.com
 
 | Entorno | Rama habitual | Sync | Deploy en servidor |
 |---|---|---|---|
-| **Demo** | `development` | `deploy/scripts/sync-demo.sh softone-prod` | `cd /opt/softone-demo && deploy/scripts/deploy-demo.sh` |
-| **Producción** | `main` | `deploy/scripts/sync.sh softone-prod` | `cd /opt/softone-app && deploy/scripts/deploy.sh` |
+| **Demo** | `development` | `public/deploy/scripts/sync-demo.sh softone-prod` | `cd /opt/softone-demo && deploy/scripts/deploy-demo.sh` |
+| **Producción** | `main` | `public/deploy/scripts/sync.sh softone-prod` | `cd /opt/softone-app && deploy/scripts/deploy.sh` |
 
 En la **LAN MikroTik** (`192.168.88.2`) puedes usar el alias `softone-lan` en lugar de `softone-prod`.
 
-**Checklist merge a producción:** [README_MAIN.md](README_MAIN.md)
+**Checklist merge a producción:** diff en `main`, migraciones Django, buckets B2/worker, y `deploy/cloudflared/config.yml` alineado con demo.
 
 ### Bootstrap demo (una vez en el servidor)
 
