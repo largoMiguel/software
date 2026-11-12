@@ -97,7 +97,8 @@ export default function CorreoInstitucionalPage() {
         <h1 className="mt-2 text-2xl font-semibold text-slate-900">Correo institucional</h1>
         <p className="mt-1 text-sm text-slate-600">
           Conecte su cuenta Google institucional para enviar respuestas PQRS desde su propio
-          correo (aparecerán en Enviados de Gmail).
+          correo (aparecerán en Enviados de Gmail). Para radicar desde Gmail use el complemento
+          publicado <strong>SoftOne PQRS</strong> (no requiere esta conexión OAuth).
         </p>
       </div>
 
@@ -171,6 +172,31 @@ export default function CorreoInstitucionalPage() {
             </button>
           </div>
         )}
+      </div>
+
+      <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-700">
+        <h2 className="text-base font-semibold text-slate-900">Radicar PQRS desde Gmail</h2>
+        <p className="mt-2">
+          El complemento está publicado en Google Workspace. Use la misma cuenta institucional
+          registrada en SoftOne (admin o secretario) y el dominio debe estar en{" "}
+          <code className="rounded bg-white px-1 text-xs">email_domains</code> de su entidad.
+        </p>
+        <ol className="mt-3 list-decimal space-y-2 pl-5">
+          <li>Abra Gmail en el navegador (correo del ciudadano, no solo la bandeja).</li>
+          <li>
+            Panel derecho → complementos → <strong>SoftOne PQRS</strong>.
+          </li>
+          <li>
+            Pulse <strong>RADICAR COMO PQRS</strong> → revise la vista previa con IA → confirme.
+          </li>
+          <li>
+            La PQRS queda en SoftOne con canal correo; puede asignarla y responder desde la app.
+          </li>
+        </ol>
+        <p className="mt-3 text-xs text-slate-500">
+          Envío de respuestas al ciudadano: conecte Google arriba y marque «Notificar por email» al
+          responder. Si no hay conexión, se usa el correo transaccional de la plataforma.
+        </p>
       </div>
     </div>
   );

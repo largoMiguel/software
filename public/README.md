@@ -277,6 +277,24 @@ main (commit + push) → sync + deploy → app.softone360.com
 
 En la **LAN MikroTik** (`192.168.88.2`) puedes usar el alias `softone-lan` en lugar de `softone-prod`.
 
+### Gmail PQRS (`login_gmail_pqrs`) — demo y prod
+
+Un solo proyecto GCP; **dos** clientes OAuth (no mezclar IDs):
+
+| Uso | Cliente en consola | Variable |
+|---|---|---|
+| Conectar Gmail / `gmail.send` | **login_gmail_pqrs** (Web) | `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` |
+| JWT del complemento en Gmail | **Google Workspace Add-ons** | `GOOGLE_ADDON_CLIENT_ID` |
+
+| Check | Demo (`/opt/softone-demo`) | Prod (`/opt/softone-app`) |
+|---|---|---|
+| `GOOGLE_GMAIL_SEND_ENABLED` | `true` | `true` (tras aprobación de `gmail.send`) |
+| `GOOGLE_REDIRECT_URI` | `…demo…/integrations/google/callback` | `…app…/integrations/google/callback` |
+| `APP_PUBLIC_URL` | `https://demo.softone360.com` | `https://app.softone360.com` |
+| Manifiesto HTTP add-on | `deploy/google-addon/deployment.json` | `deploy/google-addon/deployment.prod.json` |
+
+Tras editar `.env`: `up -d --build demo-backend` o `backend` según el stack. Probar add-on: `curl -s -o /dev/null -w "%{http_code}\n" -X POST https://demo.softone360.com/api/v1/google-addon/gmail/open -H "Content-Type: application/json" -d '{}'` → **200**. UI: `/configuracion/correo` → **Conectar con Google**. Detalle: [docs/google-gmail-pqrs.md](docs/google-gmail-pqrs.md).
+
 **Checklist merge a producción:** diff en `main`, migraciones Django, buckets B2/worker, y `deploy/cloudflared/config.yml` alineado con demo.
 
 ### Bootstrap demo (una vez en el servidor)
@@ -582,6 +600,17 @@ ZEPTOMAIL_WEBHOOK_SECRET=
 
 # PQRS ingreso IMAP (opcional)
 PQRS_INBOUND_ENABLED=false
+
+# Google Gmail — OAuth web login_gmail_pqrs + Add-on PQRS (mismo proyecto GCP 762289632417)
+# Demo: GOOGLE_REDIRECT_URI=https://demo.softone360.com/api/v1/integrations/google/callback
+# Prod: GOOGLE_REDIRECT_URI=https://app.softone360.com/api/v1/integrations/google/callback
+GOOGLE_CLIENT_ID=762289632417-52omj9cddrb5hfrsksck1ditd65lubr3.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=<secret del client login_gmail_pqrs, solo servidor>
+GOOGLE_ADDON_CLIENT_ID=762289632417-9r0uq8vd7ed57tvfkkrcqk1vkjhpa5hs.apps.googleusercontent.com
+GOOGLE_ADDON_SERVICE_ACCOUNT_EMAIL=service-762289632417@gcp-sa-gsuiteaddons.iam.gserviceaccount.com
+GOOGLE_TOKEN_ENCRYPTION_KEY=<openssl rand -base64 32>
+GOOGLE_GMAIL_SEND_ENABLED=true
+APP_PUBLIC_URL=https://app.softone360.com
 
 # Backblaze B2 — archivos por módulo
 USE_B2_STORAGE=true

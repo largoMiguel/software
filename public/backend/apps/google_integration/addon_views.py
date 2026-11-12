@@ -43,10 +43,12 @@ logger = logging.getLogger(__name__)
 
 
 def _parse_event(request) -> dict:
-    if request.data and isinstance(request.data, dict):
-        return request.data
+    data = getattr(request, "data", None)
+    if isinstance(data, dict):
+        return data
     try:
-        body = request.body.decode("utf-8") if request.body else "{}"
+        raw = getattr(request, "body", b"") or b""
+        body = raw.decode("utf-8") if raw else "{}"
         return json.loads(body) if body.strip() else {}
     except json.JSONDecodeError:
         return {}

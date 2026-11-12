@@ -1,7 +1,8 @@
 import { lazy, Suspense, useEffect } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { BarChart3, FileText, LayoutDashboard } from "lucide-react";
-import { useAuthStore } from "@/core/auth/store";
+import { useAuthStore, canAccess, PERM } from "@/core/auth/store";
+import PqrsGmailConnectButton from "./PqrsGmailConnectButton";
 
 const ModuleAIAlertsBanner = lazy(() => import("@/components/ai/ModuleAIAlertsBanner"));
 const PqrsAICommandBar = lazy(() => import("@/components/ai/PqrsAICommandBar"));
@@ -20,6 +21,10 @@ function PqrsLayoutInner() {
   const { headerActions } = usePqrsHeaderActions();
 
   const showInformesTab = canAccessModuleRoute(user, "reports_pdf");
+  const showGmailConnect = canAccess(user, {
+    roles: ["admin", "secretario"],
+    permissions: [PERM.PQRS_CHANGE],
+  });
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -76,9 +81,10 @@ function PqrsLayoutInner() {
             <p className="mt-0.5 text-xs text-slate-500 sm:text-sm">{subtitle}</p>
           </div>
         </div>
-        {isDetailOrForm && headerActions ? (
-          <div className="flex flex-wrap items-center gap-2">{headerActions}</div>
-        ) : null}
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {showGmailConnect ? <PqrsGmailConnectButton /> : null}
+          {isDetailOrForm && headerActions ? headerActions : null}
+        </div>
       </div>
 
       {!isDetailOrForm && (
