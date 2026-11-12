@@ -110,6 +110,9 @@ export const CANAL_OPTIONS = [
 
 export const SLA_OPTIONS = [5, 10, 15, 30] as const;
 
+export const MAX_ARCHIVOS_CORRESPONDENCIA = 4;
+export const MAX_FILE_SIZE_MB_CORR = 10;
+
 export const ESTADO_OPTIONS = [
   { value: "radicada", label: "Radicada" },
   { value: "en_tramite", label: "En trámite" },
@@ -139,6 +142,21 @@ export const correspondenciaApi = {
     api.get<CorrespondenciaDetail>(`/correspondencia/${id}/`).then((r) => r.data),
   create: (payload: CorrespondenciaWritePayload) =>
     api.post<CorrespondenciaDetail>("/correspondencia/", payload).then((r) => r.data),
+  update: (id: number, payload: Partial<CorrespondenciaWritePayload>) =>
+    api.patch<CorrespondenciaDetail>(`/correspondencia/${id}/`, payload).then((r) => r.data),
+  remove: (id: number) => api.delete(`/correspondencia/${id}/`),
+  createWithFiles: (payload: CorrespondenciaWritePayload, files: File[]) => {
+    const fd = new FormData();
+    Object.entries(payload).forEach(([k, v]) => {
+      if (v !== undefined && v !== null) fd.append(k, String(v));
+    });
+    files.slice(0, MAX_ARCHIVOS_CORRESPONDENCIA).forEach((f) => fd.append("archivos", f));
+    return api
+      .post<CorrespondenciaDetail>("/correspondencia/", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      })
+      .then((r) => r.data);
+  },
   responder: (id: number, respuesta_texto: string) =>
     api
       .post<CorrespondenciaDetail>(`/correspondencia/${id}/responder/`, { respuesta_texto })

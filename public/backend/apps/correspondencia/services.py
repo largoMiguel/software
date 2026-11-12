@@ -14,6 +14,7 @@ from rest_framework.exceptions import ValidationError
 from apps.common.file_delivery import signed_correspondencia_url
 from apps.common.storages import correspondencia_file_storage
 from apps.pqrs.models import sumar_dias_habiles
+from apps.pqrs.validators import validate_uploaded_file
 
 from .models import (
     DEFAULT_DIAS_HABILES,
@@ -29,6 +30,7 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 MAX_ANEXO_BYTES = 15 * 1024 * 1024  # 15 MB
+MAX_ARCHIVOS = 4
 
 
 def next_numero_radicado(entity_id: int, when: datetime | None = None) -> str:
@@ -122,6 +124,51 @@ def upload_anexo(
         {"anexo_id": anexo.id, "nombre": name, "tipo": tipo},
     )
     return anexo
+
+
+def attach_anexos_from_uploads(
+    correspondencia: Correspondencia,
+    files: list,
+    uploaded_by,
+    *,
+    tipo: str = TipoAnexo.SOLICITUD,
+) -> None:
+    """Adjunta uno o más archivos al radicar (mismo criterio PQRS)."""
+    files = [f for f in (files or []) if f]
+    if not files:
+        return
+    if len(files) > MAX_ARCHIVOS:
+        raise ValidationError(
+            {"archivos": f"Máximo {MAX_ARCHIVOS} archivos permitidos."}
+        )
+    existentes = correspondencia.anexos.count()
+    if existentes + len(files) > MAX_ARCHIVOS:
+        raise ValidationError(
+            {
+                "archivos": (
+                    f"Solo puedes adjuntar {MAX_ARCHIVOS - existentes} archivo(s) más "
+                    f"(máx {MAX_ARCHIVOS})."
+                )
+            }
+        )
+    for uploaded_file in files:
+        name = get_valid_filename(getattr(uploaded_file, "name", "") or "archivo")
+        size = int(getattr(uploaded_file, "size", 0) or 0)
+        validate_uploaded_file(name, size, field="archivos")
+        upload_anexo(correspondencia, uploaded_file=uploaded_file, tipo=tipo, uploaded_by=uploaded_by)
+
+
+def delete_correspondencia(obj: Correspondencia) -> None:
+    """Elimina el radicado y sus objetos en B2."""
+    storage = correspondencia_file_storage()
+    for anexo in obj.anexos.all():
+        key = (anexo.b2_key or "").lstrip("/")
+        if key:
+            try:
+                storage.delete(key)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("No se pudo borrar anexo correspondencia %s: %s", key, exc)
+    obj.delete()
 
 
 def delete_anexo(anexo: CorrespondenciaAnexo, actor) -> None:

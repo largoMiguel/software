@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Paperclip, Trash2 } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, Pencil, Paperclip, Trash2 } from "lucide-react";
 import {
+  ESTADO_OPTIONS,
   correspondenciaApi,
   type CorrespondenciaDetail,
 } from "@/core/api/correspondencia";
 import { formatApiError } from "@/core/api/errors";
+import { primaryRole, useAuthStore } from "@/core/auth/store";
+import CorrespondenciaFormModal from "./CorrespondenciaFormModal";
 
 function slaBadge(status: CorrespondenciaDetail["sla_status"]) {
   const map = {
@@ -29,11 +32,16 @@ function slaBadge(status: CorrespondenciaDetail["sla_status"]) {
 
 export default function CorrespondenciaDetailPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = primaryRole(user) === "admin";
   const [item, setItem] = useState<CorrespondenciaDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [respuesta, setRespuesta] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [nuevoEstado, setNuevoEstado] = useState("");
 
   async function load() {
     if (!id) return;
@@ -42,6 +50,7 @@ export default function CorrespondenciaDetailPage() {
       const data = await correspondenciaApi.get(Number(id));
       setItem(data);
       setRespuesta(data.respuesta_texto || "");
+      setNuevoEstado(data.estado);
       setError(null);
     } catch (err) {
       setError(formatApiError(err));
@@ -91,6 +100,38 @@ export default function CorrespondenciaDetailPage() {
     }
   }
 
+  async function handleDeleteRadicado() {
+    if (!item) return;
+    if (
+      !window.confirm(
+        `¿Eliminar el radicado ${item.numero_radicado}?\n\nSe borrarán también los anexos en almacenamiento. Esta acción no se puede deshacer.`,
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    try {
+      await correspondenciaApi.remove(item.id);
+      navigate(`/correspondencia/${item.sentido}`);
+    } catch (err) {
+      setError(formatApiError(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleCambiarEstado() {
+    if (!item || !nuevoEstado || nuevoEstado === item.estado) return;
+    setBusy(true);
+    try {
+      setItem(await correspondenciaApi.cambiarEstado(item.id, nuevoEstado));
+    } catch (err) {
+      setError(formatApiError(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleDeleteAnexo(anexoId: number) {
     if (!item) return;
     setBusy(true);
@@ -123,11 +164,31 @@ export default function CorrespondenciaDetailPage() {
         >
           <ArrowLeft className="h-4 w-4" /> Volver
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {slaBadge(item.sla_status)}
           <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
             {item.estado_label}
           </span>
+          {isAdmin && (
+            <>
+              <button
+                type="button"
+                onClick={() => setShowEdit(true)}
+                disabled={busy}
+                className="inline-flex items-center gap-1 rounded-[0.3rem] border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+              >
+                <Pencil className="h-3.5 w-3.5" /> Editar
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteRadicado}
+                disabled={busy}
+                className="inline-flex items-center gap-1 rounded-[0.3rem] border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Eliminar
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -169,6 +230,35 @@ export default function CorrespondenciaDetailPage() {
               hábiles)
             </div>
           </div>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h3 className="mb-3 font-semibold text-[#111827]">Estado del trámite</h3>
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="text-sm">
+            <span className="mb-1 block text-slate-600">Estado</span>
+            <select
+              value={nuevoEstado}
+              onChange={(e) => setNuevoEstado(e.target.value)}
+              disabled={busy}
+              className="rounded-[0.3rem] border border-slate-300 px-3 py-2 text-sm"
+            >
+              {ESTADO_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            onClick={handleCambiarEstado}
+            disabled={busy || nuevoEstado === item.estado}
+            className="rounded-[0.3rem] border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          >
+            Actualizar estado
+          </button>
         </div>
       </div>
 
@@ -272,6 +362,18 @@ export default function CorrespondenciaDetailPage() {
           ))}
         </ol>
       </div>
+
+      {showEdit && item && (
+        <CorrespondenciaFormModal
+          defaultSentido={item.sentido}
+          edit={item}
+          onClose={() => setShowEdit(false)}
+          onSaved={(updated) => {
+            setItem(updated);
+            setShowEdit(false);
+          }}
+        />
+      )}
     </div>
   );
 }

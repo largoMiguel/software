@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Plus, Search } from "lucide-react";
+import { Pencil, Plus, Search, Trash2 } from "lucide-react";
 import {
   correspondenciaApi,
+  type CorrespondenciaDetail,
   type CorrespondenciaListItem,
 } from "@/core/api/correspondencia";
 import { formatApiError } from "@/core/api/errors";
+import { primaryRole, useAuthStore } from "@/core/auth/store";
 import CorrespondenciaFormModal from "./CorrespondenciaFormModal";
 
 function slaBadge(status: CorrespondenciaListItem["sla_status"]) {
@@ -34,12 +36,43 @@ export default function CorrespondenciaListPage({
   sentido?: "entrada" | "salida";
 }) {
   const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = primaryRole(user) === "admin";
   const [items, setItems] = useState<CorrespondenciaListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [estado, setEstado] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [editItem, setEditItem] = useState<CorrespondenciaDetail | null>(null);
+  const [editLoadingId, setEditLoadingId] = useState<number | null>(null);
+
+  async function openEdit(id: number) {
+    setEditLoadingId(id);
+    try {
+      setEditItem(await correspondenciaApi.get(id));
+    } catch (err) {
+      setError(formatApiError(err));
+    } finally {
+      setEditLoadingId(null);
+    }
+  }
+
+  async function handleDelete(id: number, numero: string) {
+    if (
+      !window.confirm(
+        `¿Eliminar el radicado ${numero}?\n\nSe borrarán también los anexos. Esta acción no se puede deshacer.`,
+      )
+    ) {
+      return;
+    }
+    try {
+      await correspondenciaApi.remove(id);
+      await load();
+    } catch (err) {
+      setError(formatApiError(err));
+    }
+  }
 
   async function load() {
     setLoading(true);
@@ -125,6 +158,31 @@ export default function CorrespondenciaListPage({
                 <span>{r.secretaria_nombre}</span>
                 <span>{r.estado_label}</span>
               </div>
+              {isAdmin && (
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    disabled={editLoadingId === r.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void openEdit(r.id);
+                    }}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-[#0e7490]"
+                  >
+                    <Pencil className="h-3.5 w-3.5" /> Editar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void handleDelete(r.id, r.numero_radicado);
+                    }}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-red-600"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" /> Eliminar
+                  </button>
+                </div>
+              )}
             </button>
           ))}
         </div>
@@ -140,18 +198,19 @@ export default function CorrespondenciaListPage({
               <th className="whitespace-nowrap px-4 py-3">Secretaría</th>
               <th className="whitespace-nowrap px-4 py-3">Estado</th>
               <th className="whitespace-nowrap px-4 py-3">SLA</th>
+              {isAdmin && <th className="whitespace-nowrap px-4 py-3">Acciones</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {loading ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
+                <td colSpan={isAdmin ? 8 : 7} className="px-4 py-8 text-center text-slate-500">
                   Cargando…
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
+                <td colSpan={isAdmin ? 8 : 7} className="px-4 py-8 text-center text-slate-500">
                   Sin radicados.
                 </td>
               </tr>
@@ -185,6 +244,35 @@ export default function CorrespondenciaListPage({
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-slate-700">{r.estado_label}</td>
                   <td className="whitespace-nowrap px-4 py-3">{slaBadge(r.sla_status)}</td>
+                  {isAdmin && (
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          title="Editar"
+                          disabled={editLoadingId === r.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void openEdit(r.id);
+                          }}
+                          className="rounded p-1 text-slate-500 hover:bg-slate-100 hover:text-[#0e7490]"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          title="Eliminar"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void handleDelete(r.id, r.numero_radicado);
+                          }}
+                          className="rounded p-1 text-slate-500 hover:bg-red-50 hover:text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))
             )}
@@ -200,6 +288,18 @@ export default function CorrespondenciaListPage({
           onCreated={(id) => {
             setShowForm(false);
             navigate(`/correspondencia/${id}`);
+          }}
+        />
+      )}
+
+      {editItem && (
+        <CorrespondenciaFormModal
+          defaultSentido={editItem.sentido}
+          edit={editItem}
+          onClose={() => setEditItem(null)}
+          onSaved={() => {
+            setEditItem(null);
+            void load();
           }}
         />
       )}

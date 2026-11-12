@@ -2,12 +2,13 @@
 from __future__ import annotations
 
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
-from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 
 from apps.common.pagination import StandardPageNumberPagination
@@ -17,7 +18,7 @@ from apps.entities.models import Entity, Secretaria
 from .access import correspondencia_queryset, ensure_correspondencia_access, user_can_access_correspondencia
 from .export import build_excel, build_pdf
 from .filters import CorrespondenciaFilterSet
-from .models import Correspondencia, CorrespondenciaAnexo, EstadoCorrespondencia
+from .models import Correspondencia, CorrespondenciaAnexo, EstadoCorrespondencia, TipoAnexo
 from .serializers import (
     AnexoUploadSerializer,
     AsignarSerializer,
@@ -30,10 +31,12 @@ from .serializers import (
 )
 from .services import (
     asignar,
+    attach_anexos_from_uploads,
     cambiar_estado,
     compute_stats,
     crear_correspondencia,
     delete_anexo,
+    delete_correspondencia,
     responder,
     upload_anexo,
 )
@@ -55,6 +58,7 @@ def _entity_for_user(user) -> Entity:
 class CorrespondenciaViewSet(viewsets.ModelViewSet):
     permission_classes = (permissions.IsAuthenticated,)
     pagination_class = StandardPageNumberPagination
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
     http_method_names = ["get", "post", "patch", "delete", "head", "options"]
 
     def initial(self, request, *args, **kwargs):
@@ -121,7 +125,18 @@ class CorrespondenciaViewSet(viewsets.ModelViewSet):
         data = {**ser.validated_data, "secretaria": secretaria, "assigned_to": assigned_to}
         data.pop("secretaria_id", None)
         data.pop("assigned_to_id", None)
-        obj = crear_correspondencia(entity=self.entity, user=request.user, data=data)
+        files = request.FILES.getlist("archivos") or request.FILES.getlist("archivos[]")
+        with transaction.atomic():
+            obj = crear_correspondencia(entity=self.entity, user=request.user, data=data)
+            if files:
+                tipo_anexo = (
+                    TipoAnexo.RESPUESTA
+                    if obj.sentido == "salida"
+                    else TipoAnexo.SOLICITUD
+                )
+                attach_anexos_from_uploads(
+                    obj, files, request.user, tipo=tipo_anexo
+                )
         return Response(
             CorrespondenciaDetailSerializer(
                 Correspondencia.objects.filter(pk=obj.pk)
@@ -208,7 +223,7 @@ class CorrespondenciaViewSet(viewsets.ModelViewSet):
         if "admin" not in user_roles(request.user):
             raise PermissionDenied("Solo administradores pueden eliminar radicados.")
         obj = self.get_object()
-        obj.delete()
+        delete_correspondencia(obj)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, methods=["get"])
