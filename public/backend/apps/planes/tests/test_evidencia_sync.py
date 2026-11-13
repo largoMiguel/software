@@ -14,8 +14,10 @@ from apps.planes.evidencia_sync import (
 
 
 class MockEvidencia:
-    def __init__(self, cantidad):
+    def __init__(self, cantidad, url_evidencia=""):
         self.cantidad_ejecutada = Decimal(str(cantidad))
+        self.url_evidencia = url_evidencia
+        self.archivos = []
 
 
 class MockActividad:
@@ -68,3 +70,24 @@ class EvidenciaSyncTests(TestCase):
         act = MockActividad(meta="10", evidencias=[MockEvidencia(8)])
         with self.assertRaises(ValidationError):
             validate_cantidad_ejecutada(act, 5)
+
+    def test_avance_evidencia_sin_meta_numerica(self):
+        act = MockActividad(
+            meta="Cumplimiento trimestral",
+            evidencias=[MockEvidencia(0, url_evidencia="https://example.com/ev")],
+        )
+        self.assertEqual(compute_avance_pct(act), 100)
+
+    def test_avance_meta_baja_con_ejecucion_y_soporte(self):
+        act = MockActividad(
+            meta="4",
+            evidencias=[MockEvidencia(1, url_evidencia="https://example.com/ev")],
+        )
+        self.assertEqual(compute_avance_pct(act), 100)
+
+    def test_avance_meta_numerica_solo_documento(self):
+        act = MockActividad(
+            meta="1",
+            evidencias=[MockEvidencia(0, url_evidencia="https://example.com/ev")],
+        )
+        self.assertEqual(compute_avance_pct(act), 100)

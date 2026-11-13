@@ -20,7 +20,8 @@ import {
   type GenerarInformePlanPayload,
   type InformePlan,
   type InformePlanEstado,
-  TRIMESTRE_OPTIONS,
+  TRIMESTRE_INFORME_OPTIONS,
+  TRIMESTRE_TODOS,
   planesApi,
   type PlanListItem,
 } from "@/core/api/planes";
@@ -120,7 +121,7 @@ function ReportModal({
   defaultAnio,
 }: ReportModalProps) {
   const [anio, setAnio] = useState(defaultAnio);
-  const [trimestre, setTrimestre] = useState<number>(1);
+  const [trimestre, setTrimestre] = useState<number>(TRIMESTRE_TODOS);
   const [planId, setPlanId] = useState("");
   const [secretariaId, setSecretariaId] = useState("");
   const [firmanteId, setFirmanteId] = useState("");
@@ -147,7 +148,7 @@ function ReportModal({
 
   function handleGenerate() {
     setTried(true);
-    if (!firmanteId || !trimestre) return;
+    if (!firmanteId) return;
     const payload: GenerarInformePlanPayload = {
       tipo: INFORME_TIPO,
       anio,
@@ -189,7 +190,7 @@ function ReportModal({
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Trimestre</label>
             <select value={trimestre} onChange={(e) => setTrimestre(Number(e.target.value))} className={inputClass}>
-              {TRIMESTRE_OPTIONS.map((t) => (
+              {TRIMESTRE_INFORME_OPTIONS.map((t) => (
                 <option key={t.value} value={t.value}>
                   {t.label}
                 </option>
@@ -392,7 +393,10 @@ export default function PlanesInformesPage() {
     try {
       await planesInformesApi.download(
         informe.id,
-        informe.filename || `informe_seguimiento_d612_${informe.anio}_T${informe.trimestre}.pdf`,
+        informe.filename ||
+          `informe_seguimiento_d612_${informe.anio}_${
+            informe.trimestre === TRIMESTRE_TODOS ? "TODOS" : `T${informe.trimestre}`
+          }.pdf`,
       );
     } catch (err) {
       setActionError(formatApiError(err, "No se pudo descargar el informe."));

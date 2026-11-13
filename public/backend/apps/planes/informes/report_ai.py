@@ -64,7 +64,19 @@ class PlanesReportAIService:
         alcance = secretaria_nombre or "toda la entidad territorial"
         por_estado = analytics.get("actividades_por_estado", {})
         por_tri = analytics.get("por_trimestre", [])
-        tri_stats = next((t for t in por_tri if t.get("trimestre") == trimestre), {})
+        if trimestre == 0:
+            tri_line = (
+                f"• Alcance temporal — {trimestre_label}: "
+                f"{analytics.get('actividades_total', 0)} actividades | "
+                f"avance promedio {analytics.get('avance_promedio', 0)}%"
+            )
+        else:
+            tri_stats = next((t for t in por_tri if t.get("trimestre") == trimestre), {})
+            tri_line = (
+                f"• Trimestre auditado — total actividades: {tri_stats.get('total', 0)} | "
+                f"completadas: {tri_stats.get('completadas', 0)} | "
+                f"avance: {tri_stats.get('avance_promedio', 0)}%"
+            )
         return f"""Analiza el seguimiento a los Planes Institucionales (Decreto 612) de {entity_name} para la vigencia {anio}, {trimestre_label} ({alcance}).
 
 **INDICADORES:**
@@ -75,7 +87,7 @@ class PlanesReportAIService:
 • Actividades vencidas sin completar: {analytics.get('actividades_vencidas', 0)}
 • Planes sin responsable asignado: {analytics.get('planes_sin_responsable', 0)}
 • Actividades pendientes: {por_estado.get('PENDIENTE', 0)} | En progreso: {por_estado.get('EN_PROGRESO', 0)} | Completadas: {por_estado.get('COMPLETADA', 0)}
-• Trimestre auditado — total actividades: {tri_stats.get('total', 0)} | completadas: {tri_stats.get('completadas', 0)} | avance: {tri_stats.get('avance_promedio', 0)}%
+{tri_line}
 • Actividades sin evidencia: {analytics.get('actividades_sin_evidencia', 0)}
 
 Genera un análisis CONCISO con estas secciones:

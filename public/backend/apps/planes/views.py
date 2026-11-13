@@ -78,9 +78,14 @@ def _build_plan_detail_data(plan_pk: int, user, entity, request=None) -> dict | 
         return None
     actividades = list(
         actividades_queryset_for_user(user, entity)
-        .filter(plan=obj)
+        .filter(plan=obj, anio=obj.anio)
+        .prefetch_related("evidencias", "evidencias__archivos")
         .order_by("trimestre", "fecha_inicio", "id")
     )
+    from .stats import average_avance_actividades
+
+    obj.avance_promedio = average_avance_actividades(actividades)
+    obj.actividades_count = len(actividades)
     obj.resumen_por_trimestre = build_resumen_por_trimestre(obj, actividades)
     return PlanDetailSerializer(
         obj,

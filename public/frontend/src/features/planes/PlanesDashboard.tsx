@@ -39,7 +39,7 @@ export default function PlanesDashboard() {
         <StatCard label="Planes vigencia" value={stats.planes_total} icon={<ClipboardList className="h-5 w-5" />} />
         <StatCard label="Actividades" value={stats.actividades_total} icon={<Calendar className="h-5 w-5" />} />
         <StatCard
-          label="Avance promedio"
+          label="Avance (actividades)"
           value={`${stats.avance_promedio}%`}
           icon={<TrendingUp className="h-5 w-5" />}
         />

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, ClipboardList, Inbox, Pencil, Plus } from "lucide-react";
+import { ArrowLeft, ClipboardList, Inbox, Pencil, Plus, TrendingUp } from "lucide-react";
 import { secretariasApi, type Secretaria } from "@/core/api/entities";
 import {
   planesApi,
@@ -132,6 +132,12 @@ export default function PlanDetailPage() {
     resumen: plan.resumen_por_trimestre?.find((r) => r.trimestre === t.value),
   }));
 
+  const avancePlan =
+    plan.avance_promedio ??
+    (plan.actividades.length > 0
+      ? Math.round(plan.actividades.reduce((sum, a) => sum + a.avance, 0) / plan.actividades.length)
+      : 0);
+
   return (
     <div className="mx-auto w-full max-w-[1600px] space-y-6">
       <div>
@@ -142,6 +148,12 @@ export default function PlanDetailPage() {
         </p>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <PlanesBadge tone={planEstadoTone(plan.estado)}>{plan.estado_label}</PlanesBadge>
+          {plan.actividades.length > 0 && (
+            <PdmBadge tone={getColorProgreso(avancePlan)}>
+              <TrendingUp className="mr-1 inline h-3.5 w-3.5" />
+              Avance vigencia {avancePlan}%
+            </PdmBadge>
+          )}
           {plan.fecha_publicacion && (
             <span className="text-xs text-slate-500">Publicado: {plan.fecha_publicacion}</span>
           )}

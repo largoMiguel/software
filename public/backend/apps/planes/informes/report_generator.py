@@ -32,6 +32,7 @@ from apps.common.report_theme import (
     table_style_cmds,
 )
 from apps.planes.informes import narrativa
+from apps.planes.models import TRIMESTRE_TODOS, Trimestre
 
 
 class PlanesReportGenerator:
@@ -302,6 +303,13 @@ class PlanesReportGenerator:
 
     def generate_resumen_graficas(self) -> None:
         self._append_heading("RESUMEN DE AVANCE")
+        avance_global = self.stats.get("avance_promedio", 0)
+        total_act = self.stats.get("actividades_total", 0)
+        self._append_paragraph(
+            f"Avance promedio del informe: <b>{avance_global}%</b> "
+            f"sobre {total_act} actividad(es) del alcance seleccionado."
+        )
+        self._generate_resumen_trimestres_tabla()
         avance_por_plan: list[tuple[str, float]] = []
         for plan in self.planes:
             acts = self.actividades_por_plan.get(plan.id, [])
@@ -313,12 +321,51 @@ class PlanesReportGenerator:
             labels, values = zip(*avance_por_plan, strict=True)
             self._append_bar_chart(list(labels), list(values), "Avance por plan institucional (%)", "avance_planes")
 
+    def _generate_resumen_trimestres_tabla(self) -> None:
+        por_tri = self.stats.get("por_trimestre") or []
+        if not por_tri:
+            return
+        st = self._institutional_styles()
+        tri_con_actividades = [t for t in por_tri if t.get("total", 0) > 0]
+        if tri_con_actividades:
+            labels = [t["trimestre_label"] for t in tri_con_actividades]
+            values = [float(t.get("avance_promedio") or 0) for t in tri_con_actividades]
+            self._append_bar_chart(labels, values, "Avance por trimestre (%)", "avance_trimestre")
+
+        headers = [
+            ("TRIMESTRE", "cell_header_left"),
+            ("ACTIVIDADES", "cell_header_center"),
+            ("COMPLETADAS", "cell_header_center"),
+            ("AVANCE %", "cell_header_center"),
+        ]
+        rows = [[Paragraph(f"<b>{h}</b>", st[k]) for h, k in headers]]
+        for t in por_tri:
+            rows.append(
+                [
+                    Paragraph(str(t.get("trimestre_label", "")), st["cell_left"]),
+                    Paragraph(str(t.get("total", 0)), st["cell_right"]),
+                    Paragraph(str(t.get("completadas", 0)), st["cell_right"]),
+                    Paragraph(f"{t.get('avance_promedio', 0)}%", st["cell_right"]),
+                ]
+            )
+        col_widths = [2.2 * inch, 1.2 * inch, 1.2 * inch, 1.0 * inch]
+        table = Table(rows, colWidths=col_widths, repeatRows=1)
+        table.setStyle(TableStyle(table_style_cmds(n_rows=len(rows), numeric_cols=(1, 2, 3), left_cols=(0,))))
+        self.story.append(table)
+        self.story.append(Spacer(1, 0.2 * inch))
+
     def generate_actividades_desarrolladas(self) -> None:
         self._append_heading("ACTIVIDADES DESARROLLADAS")
         st = self._institutional_styles()
-        col_widths = [0.5 * inch, 1.5 * inch, 1.25 * inch, 1.0 * inch, 1.0 * inch, 1.75 * inch]
+        incluir_tri = self.trimestre == TRIMESTRE_TODOS
+        col_widths = (
+            [0.45 * inch, 0.85 * inch, 1.35 * inch, 1.15 * inch, 0.75 * inch, 0.95 * inch, 1.5 * inch]
+            if incluir_tri
+            else [0.5 * inch, 1.5 * inch, 1.25 * inch, 1.0 * inch, 1.0 * inch, 1.75 * inch]
+        )
         headers = [
             ("ITEM", "cell_header_right"),
+            *([("TRIMESTRE", "cell_header_center")] if incluir_tri else []),
             ("ACTIVIDAD PROGRAMADA", "cell_header_left"),
             ("ACTIVIDAD EJECUTADA", "cell_header_left"),
             ("% DE CUMPLIMIENTO", "cell_header_center"),
@@ -353,24 +400,31 @@ class PlanesReportGenerator:
                     desc_ejec = ultima_ev.descripcion[:200]
                 elif ejecutado:
                     desc_ejec = f"Ejecutado: {ejecutado}"
-                rows.append(
-                    [
-                        Paragraph(str(idx), st["cell_right"]),
-                        Paragraph(act.nombre[:300], st["cell_left"]),
-                        Paragraph(desc_ejec or "—", st["cell_left"]),
-                        Paragraph(f"{avance}%", st["cell_right"]),
-                        Paragraph(plazo or "—", st["cell_left"]),
-                        Paragraph(resp[:120], st["cell_left"]),
-                    ]
-                )
+                tri_label = ""
+                try:
+                    tri_label = Trimestre(act.trimestre).label
+                except ValueError:
+                    tri_label = str(act.trimestre)
+                row_cells = [
+                    Paragraph(str(idx), st["cell_right"]),
+                    *([Paragraph(tri_label, st["cell_center"])] if incluir_tri else []),
+                    Paragraph(act.nombre[:300], st["cell_left"]),
+                    Paragraph(desc_ejec or "—", st["cell_left"]),
+                    Paragraph(f"{avance}%", st["cell_right"]),
+                    Paragraph(plazo or "—", st["cell_left"]),
+                    Paragraph(resp[:120], st["cell_left"]),
+                ]
+                rows.append(row_cells)
 
             table = Table(rows, colWidths=col_widths, repeatRows=1, splitByRow=True)
+            numeric_cols = (0, 4) if incluir_tri else (0, 3)
+            left_cols = (2, 3, 5, 6) if incluir_tri else (1, 2, 4, 5)
             table.setStyle(
                 TableStyle(
                     table_style_cmds(
                         n_rows=len(rows),
-                        numeric_cols=(0, 3),
-                        left_cols=(1, 2, 4, 5),
+                        numeric_cols=numeric_cols,
+                        left_cols=left_cols,
                     )
                 )
             )

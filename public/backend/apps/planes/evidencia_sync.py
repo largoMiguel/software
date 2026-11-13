@@ -28,6 +28,23 @@ def _evidencias_iter(actividad: PlanActividad):
     return actividad.evidencias.all()
 
 
+def _evidencia_tiene_soporte(evidencia) -> bool:
+    if (getattr(evidencia, "url_evidencia", None) or "").strip():
+        return True
+    if Decimal(evidencia.cantidad_ejecutada or 0) > 0:
+        return True
+    archivos = getattr(evidencia, "archivos", None)
+    if archivos is None:
+        return False
+    if hasattr(archivos, "all"):
+        return archivos.exists()
+    return bool(list(archivos))
+
+
+def actividad_tiene_evidencia_soporte(actividad: PlanActividad) -> bool:
+    return any(_evidencia_tiene_soporte(ev) for ev in _evidencias_iter(actividad))
+
+
 def total_ejecutado(actividad: PlanActividad) -> Decimal:
     """Suma cantidad_ejecutada de evidencias (prefetch en listados; BD si no hay prefetch)."""
     cache = getattr(actividad, "_prefetched_objects_cache", None)
@@ -101,12 +118,32 @@ def validate_cantidad_ejecutada(
 def compute_avance_pct(actividad: PlanActividad) -> int:
     meta = parse_meta_programada(actividad.meta)
     ejecutado = total_ejecutado(actividad)
+    con_soporte = actividad_tiene_evidencia_soporte(actividad)
+
     if meta is None or meta <= 0:
-        if ejecutado > 0:
+        if ejecutado > 0 or con_soporte:
+            return 100
+        stored = int(getattr(actividad, "avance", 0) or 0)
+        if stored >= 100 and con_soporte:
             return 100
         return 0
-    pct = (ejecutado / meta) * Decimal("100")
-    return int(min(Decimal("100"), pct).quantize(Decimal("1")))
+
+    if ejecutado >= meta:
+        return 100
+    if ejecutado > 0:
+        # Actividad trimestral con ejecución y soporte = cumplimiento del periodo
+        if con_soporte and meta <= Decimal("4"):
+            return 100
+        pct = (ejecutado / meta) * Decimal("100")
+        return int(min(Decimal("100"), pct).quantize(Decimal("1")))
+
+    # Meta numérica pero evidencia documental sin cantidad (o migraciones antiguas)
+    if con_soporte:
+        return 100
+    stored = int(getattr(actividad, "avance", 0) or 0)
+    if stored >= 100:
+        return 100
+    return 0
 
 
 def sync_actividad_from_evidencias(actividad: PlanActividad) -> None:

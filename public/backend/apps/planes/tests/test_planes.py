@@ -8,7 +8,7 @@ from rest_framework.test import APIRequestFactory, force_authenticate
 
 from apps.accounts.models import User, UserEntityMembership
 from apps.entities.models import Entity, Secretaria
-from apps.planes.models import PlanActividad, PlanCatalogo, PlanInstitucional
+from apps.planes.models import PlanActividad, PlanCatalogo, PlanEvidencia, PlanInstitucional
 from apps.planes.validators import MAX_EVIDENCIA_ARCHIVOS, validate_evidencia_archivo
 from apps.planes.views import PlanActividadViewSet, PlanViewSet
 from rest_framework.exceptions import ValidationError
@@ -325,6 +325,40 @@ class PlanesAccessTests(TestCase):
         self.assertEqual(response.data["evidencias"], [])
         self.assertFalse(response.data["tiene_evidencia"])
 
+    def test_plan_avance_four_trimestres_al_cien(self):
+        from apps.planes.evidencia_sync import sync_actividad_from_evidencias
+        from apps.planes.stats import attach_plan_list_metrics
+
+        for tri in (1, 2, 3, 4):
+            act = PlanActividad.objects.create(
+                entity=self.entity_a,
+                plan=self.plan_a,
+                anio=self.plan_a.anio,
+                trimestre=tri,
+                nombre=f"Actividad T{tri}",
+                meta="10",
+                responsable_secretaria=self.secretaria_a,
+            )
+            PlanEvidencia.objects.create(
+                entity=self.entity_a,
+                actividad=act,
+                descripcion="Completa",
+                cantidad_ejecutada=10,
+            )
+            sync_actividad_from_evidencias(act)
+
+        page = [self.plan_a]
+        attach_plan_list_metrics(page, self.admin_a, self.entity_a)
+        self.assertEqual(page[0].actividades_count, 4)
+        self.assertEqual(page[0].avance_promedio, 100.0)
+
+        request = self.factory.get(f"/api/v1/planes/{self.plan_a.id}/")
+        force_authenticate(request, user=self.admin_a)
+        view = PlanViewSet.as_view({"get": "retrieve"})
+        response = view(request, pk=self.plan_a.id)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["avance_promedio"], 100.0)
+
     def test_attach_metrics_on_list_not_queryset(self):
         actividad = PlanActividad.objects.create(
             entity=self.entity_a,
@@ -332,11 +366,20 @@ class PlanesAccessTests(TestCase):
             anio=2026,
             trimestre=1,
             nombre="Con avance",
+            meta="100",
             avance=50,
             responsable_secretaria=self.secretaria_a,
         )
+        PlanEvidencia.objects.create(
+            entity=self.entity_a,
+            actividad=actividad,
+            descripcion="Mitad de meta",
+            cantidad_ejecutada=50,
+        )
+        from apps.planes.evidencia_sync import sync_actividad_from_evidencias
         from apps.planes.stats import attach_plan_list_metrics
 
+        sync_actividad_from_evidencias(actividad)
         page = [self.plan_a]
         attach_plan_list_metrics(page, self.admin_a, self.entity_a)
         self.assertEqual(page[0].actividades_count, 1)

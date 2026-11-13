@@ -3,7 +3,8 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
-from apps.planes.models import InformePlan, InformePlanTipo, Trimestre
+from apps.planes.models import TRIMESTRE_TODOS, InformePlan, InformePlanTipo, Trimestre
+from apps.planes.informes.narrativa import trimestre_label as informe_trimestre_label
 
 from .types import tipo_informe_habilitado
 
@@ -25,8 +26,10 @@ class GenerarInformePlanSerializer(serializers.Serializer):
         return value
 
     def validate_trimestre(self, value: int) -> int:
+        if value == TRIMESTRE_TODOS:
+            return value
         if value not in Trimestre.values:
-            raise serializers.ValidationError("Trimestre inválido. Use 1, 2, 3 o 4.")
+            raise serializers.ValidationError("Trimestre inválido. Use 0 (todos), 1, 2, 3 o 4.")
         return value
 
     def validate_tipo(self, value: str) -> str:
@@ -86,10 +89,7 @@ class InformePlanSerializer(serializers.ModelSerializer):
         return ""
 
     def get_trimestre_label(self, obj) -> str:
-        try:
-            return Trimestre(obj.trimestre).label
-        except ValueError:
-            return str(obj.trimestre)
+        return informe_trimestre_label(obj.trimestre)
 
     def get_expires_in_days(self, obj) -> int:
         from django.utils import timezone

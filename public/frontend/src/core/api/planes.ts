@@ -169,11 +169,19 @@ export interface PlanActividadWritePayload {
   responsable_usuario?: number | null;
 }
 
+export const TRIMESTRE_TODOS = 0;
+
 export const TRIMESTRE_OPTIONS = [
   { value: 1, label: "Trimestre I" },
   { value: 2, label: "Trimestre II" },
   { value: 3, label: "Trimestre III" },
   { value: 4, label: "Trimestre IV" },
+] as const;
+
+/** Opciones de trimestre para informes PDF (incluye vigencia completa). */
+export const TRIMESTRE_INFORME_OPTIONS = [
+  { value: TRIMESTRE_TODOS, label: "Todos los trimestres" },
+  ...TRIMESTRE_OPTIONS,
 ] as const;
 
 export const ESTADO_PLAN_OPTIONS = [

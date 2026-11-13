@@ -15,8 +15,8 @@ from apps.common.b2_client import get_b2_client
 from apps.common.storages import planes_storage_for_paths
 from apps.planes.access import actividades_queryset_for_user, planes_queryset_for_user
 from apps.planes.evidencia_sync import compute_avance_pct, total_ejecutado
-from apps.planes.models import InformePlan, InformePlanEstado, PlanCatalogo, PlanInstitucional
-from apps.planes.stats import compute_plan_stats
+from apps.planes.models import TRIMESTRE_TODOS, InformePlan, InformePlanEstado, PlanCatalogo, PlanInstitucional
+from apps.planes.stats import build_por_trimestre_metrics, compute_plan_stats
 
 from .report_ai import PlanesReportAIService, build_fallback_analysis
 from .report_generator import PlanesReportGenerator
@@ -143,13 +143,20 @@ def _gather_report_data(informe: InformePlan) -> dict:
     if not planes:
         raise ValueError("No hay planes institucionales para generar el informe con los filtros seleccionados.")
 
-    act_qs = (
-        actividades_queryset_for_user(user, entity)
-        .filter(anio=anio, trimestre=trimestre, plan_id__in=[p.id for p in planes])
-        .order_by("plan__catalogo__orden", "plan_id", "id")
+    act_qs = actividades_queryset_for_user(user, entity).filter(
+        anio=anio,
+        plan_id__in=[p.id for p in planes],
     )
-    actividades = list(act_qs)
+    if trimestre != TRIMESTRE_TODOS:
+        act_qs = act_qs.filter(trimestre=trimestre)
+    actividades = list(
+        act_qs.select_related("plan", "plan__catalogo", "responsable_secretaria")
+        .prefetch_related("evidencias", "evidencias__archivos")
+        .order_by("plan__catalogo__orden", "plan_id", "trimestre", "id")
+    )
     if not actividades:
+        if trimestre == TRIMESTRE_TODOS:
+            raise ValueError("No hay actividades para la vigencia seleccionada con los filtros indicados.")
         raise ValueError("No hay actividades para el trimestre seleccionado con los filtros indicados.")
 
     _prepare_actividades_evidencias(actividades, informe.incluir_evidencias)
@@ -159,6 +166,23 @@ def _gather_report_data(informe: InformePlan) -> dict:
         stats["planes_total"] = len(planes)
     if informe.responsable_secretaria_id:
         stats["planes_sin_responsable"] = sum(1 for p in planes if not p.responsable_secretaria_id)
+    stats["actividades_total"] = len(actividades)
+    stats["avance_promedio"] = round(
+        sum(a.avance_calculado for a in actividades) / len(actividades),
+        1,
+    )
+    stats["por_trimestre"] = build_por_trimestre_metrics(actividades)
+    por_estado_act: dict[str, int] = {}
+    for act in actividades:
+        avance = act.avance_calculado
+        if avance >= 100:
+            estado = "COMPLETADA"
+        elif avance > 0:
+            estado = "EN_PROGRESO"
+        else:
+            estado = "PENDIENTE"
+        por_estado_act[estado] = por_estado_act.get(estado, 0) + 1
+    stats["actividades_por_estado"] = por_estado_act
 
     d612_catalog_ids = set(
         PlanCatalogo.objects.filter(entity__isnull=True, es_decreto612=True, is_active=True).values_list("id", flat=True)
@@ -256,10 +280,11 @@ def run_informe_plan_generation(informe_id: int) -> None:
         sec_suffix = f"_sec{informe.responsable_secretaria_id}" if informe.responsable_secretaria_id else ""
         plan_suffix = f"_plan{informe.plan_id}" if informe.plan_id else ""
         tipo_slug = storage_slug_for_tipo(informe.tipo)
-        filename = f"informe_{tipo_slug}_d612_{informe.anio}_T{informe.trimestre}{sec_suffix}.pdf"
+        tri_suffix = "TODOS" if informe.trimestre == TRIMESTRE_TODOS else f"T{informe.trimestre}"
+        filename = f"informe_{tipo_slug}_d612_{informe.anio}_{tri_suffix}{sec_suffix}.pdf"
         b2_key = (
             f"informes/{informe.entity_id}/{tipo_slug}/"
-            f"informe_{tipo_slug}_d612_{informe.anio}_T{informe.trimestre}{sec_suffix}{plan_suffix}_{timestamp}.pdf"
+            f"informe_{tipo_slug}_d612_{informe.anio}_{tri_suffix}{sec_suffix}{plan_suffix}_{timestamp}.pdf"
         )
 
         storage = planes_storage_for_paths()

@@ -28,6 +28,11 @@ class Trimestre(models.IntegerChoices):
     IV = 4, "Trimestre IV"
 
 
+# Valor almacenado en informes PDF cuando el alcance incluye los cuatro trimestres.
+TRIMESTRE_TODOS = 0
+TRIMESTRE_TODOS_LABEL = "Todos los trimestres"
+
+
 class PlanCatalogo(models.Model):
     """Catálogo de planes: globales (Decreto 612) o propios por entidad."""
 

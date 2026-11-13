@@ -3,10 +3,12 @@ from __future__ import annotations
 
 from datetime import date
 
-from apps.planes.models import Trimestre
+from apps.planes.models import TRIMESTRE_TODOS, TRIMESTRE_TODOS_LABEL, Trimestre
 
 
 def trimestre_label(trimestre: int) -> str:
+    if trimestre == TRIMESTRE_TODOS:
+        return TRIMESTRE_TODOS_LABEL
     try:
         return Trimestre(trimestre).label
     except ValueError:
@@ -52,7 +54,7 @@ def introduccion(ctx: dict[str, str]) -> str:
         f"sobre el particular\", y la Ley 1712 de 2014 por medio de la cual se crea la Ley de "
         f"Transparencia y Acceso a la Información Pública; programó dentro de su Plan Anual de "
         f"Auditorías (PAAI) vigencia {ctx['anio']} la realización de una auditoría de seguimiento al "
-        f"cumplimiento del Decreto 612 de 2018, con enfoque en el {ctx['trimestre']} de la vigencia "
+        f"cumplimiento del Decreto 612 de 2018, con enfoque en {ctx['trimestre']} de la vigencia "
         f"{ctx['anio']}, bajo la responsabilidad de {ctx['secretaria']}."
         f"\n\n"
         f"Este informe se realiza con base en la revisión de la articulación del Plan de Acción "
