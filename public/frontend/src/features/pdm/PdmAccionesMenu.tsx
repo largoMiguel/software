@@ -3,6 +3,7 @@ import { ChevronDown, Download, Link2, MoreHorizontal, RefreshCw, Upload } from 
 import { pdmBtnPrimary } from "@/features/pdm/pdmStyles";
 
 interface PdmAccionesMenuProps {
+  readOnly?: boolean;
   onExportarPiip: () => void;
   onContratos: () => void;
   onEjecucion: () => void;
@@ -13,6 +14,7 @@ interface PdmAccionesMenuProps {
 }
 
 export default function PdmAccionesMenu({
+  readOnly = false,
   onExportarPiip,
   onContratos,
   onEjecucion,
@@ -75,7 +77,7 @@ export default function PdmAccionesMenu({
             }}
           >
             <Upload className="h-4 w-4 text-amber-600" />
-            Contratos RPS
+            {readOnly ? "Ver contratos RPS" : "Contratos RPS"}
           </button>
           <button
             type="button"
@@ -87,7 +89,7 @@ export default function PdmAccionesMenu({
             }}
           >
             <Upload className="h-4 w-4 text-emerald-600" />
-            Ejecución presupuestal
+            {readOnly ? "Consultar ejecución presupuestal" : "Ejecución presupuestal"}
           </button>
           {onEjecucionMensual ? (
             <button
@@ -100,7 +102,7 @@ export default function PdmAccionesMenu({
               }}
             >
               <Upload className="h-4 w-4 text-teal-600" />
-              Ejecución mensual (PIIP)
+              {readOnly ? "Consultar ejecución mensual (PIIP)" : "Ejecución mensual (PIIP)"}
             </button>
           ) : null}
           {onArmonizaciones ? (
@@ -117,18 +119,20 @@ export default function PdmAccionesMenu({
               Armonizaciones presupuesto
             </button>
           ) : null}
-          <button
-            type="button"
-            role="menuitem"
-            className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50"
-            onClick={() => {
-              setOpen(false);
-              onRecargarPdm();
-            }}
-          >
-            <RefreshCw className="h-4 w-4 text-blue-600" />
-            Cargar nuevamente PDM
-          </button>
+          {!readOnly ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50"
+              onClick={() => {
+                setOpen(false);
+                onRecargarPdm();
+              }}
+            >
+              <RefreshCw className="h-4 w-4 text-blue-600" />
+              Cargar nuevamente PDM
+            </button>
+          ) : null}
         </div>
       )}
     </div>

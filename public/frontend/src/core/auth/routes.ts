@@ -54,7 +54,7 @@ export const APP_MODULE_ROUTES: AppModuleRoute[] = [
     paths: ["/pdm"],
     label: "PDM",
     module: "enable_pdm",
-    access: { roles: ["admin", "secretario", "contratista"] },
+    access: { roles: ["admin", "secretario", "contratista", "consulta_pdm"] },
     showInNav: true,
     navSection: "main",
   },

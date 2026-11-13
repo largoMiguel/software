@@ -26,6 +26,8 @@ from apps.entities.models import Entity, Secretaria
 from django_filters.rest_framework import DjangoFilterBackend
 
 from .access import (
+    PdmConsultaReadOnly,
+    _entity_read_scope,
     actividades_queryset_for_user,
     codigos_producto_for_user,
     ejecucion_queryset_for_user,
@@ -35,6 +37,8 @@ from .access import (
     user_can_access_codigo_producto,
     user_can_access_producto,
 )
+
+_PDM_PERMISSIONS = [permissions.IsAuthenticated, PdmConsultaReadOnly]
 from .ejecucion_resumen import resumen_ejecucion_entidad
 
 User = get_user_model()
@@ -214,7 +218,7 @@ def _filter_productos_by_estado(qs, entity_id: int, anio: int, estado: str):
 
 
 class PdmStatusView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = _PDM_PERMISSIONS
 
     def get(self, request, slug: str):
         entity = _entity_or_404(slug)
@@ -240,7 +244,7 @@ class PdmStatusView(APIView):
 class PdmMetaView(APIView):
     """Metadatos ligeros: filtros, iniciativas SGR (sin productos completos)."""
 
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = _PDM_PERMISSIONS
 
     def get(self, request, slug: str):
         entity = _entity_or_404(slug)
@@ -256,7 +260,7 @@ class PdmMetaView(APIView):
 
 
 class PdmStatsView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = _PDM_PERMISSIONS
 
     def get(self, request, slug: str):
         entity = _entity_or_404(slug)
@@ -287,7 +291,7 @@ class PdmStatsView(APIView):
 class PdmAnalisisView(APIView):
     """Analítica agregada para la vista de Análisis PDM."""
 
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = _PDM_PERMISSIONS
 
     def get(self, request, slug: str):
         entity = _entity_or_404(slug)
@@ -305,7 +309,7 @@ class PdmAnalisisView(APIView):
                 anio = None
 
         secretaria_param = request.query_params.get("secretaria")
-        if secretaria_param and _is_admin(request.user):
+        if secretaria_param and _entity_read_scope(request.user):
             try:
                 productos_qs = productos_qs.filter(responsable_secretaria_id=int(secretaria_param))
             except (TypeError, ValueError):
@@ -315,7 +319,7 @@ class PdmAnalisisView(APIView):
             productos_qs,
             entity.id,
             anio,
-            include_por_secretaria=_is_admin(request.user),
+            include_por_secretaria=_entity_read_scope(request.user),
         )
         return Response(data)
 
@@ -323,7 +327,7 @@ class PdmAnalisisView(APIView):
 class PdmProyectosView(APIView):
     """Proyectos BPIN agrupados con productos del Plan Indicativo."""
 
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = _PDM_PERMISSIONS
 
     def get(self, request, slug: str):
         entity = _entity_or_404(slug)
@@ -356,7 +360,7 @@ class PdmProyectosView(APIView):
 class PdmProductosListView(APIView):
     """Listado paginado de productos con métricas por año."""
 
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = _PDM_PERMISSIONS
     pagination_class = StandardPageNumberPagination
     filter_backends = [DjangoFilterBackend]
     filterset_class = PdmProductoFilterSet
@@ -389,7 +393,7 @@ class PdmProductosListView(APIView):
 
 
 class PdmProductoDetailView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = _PDM_PERMISSIONS
 
     def get(self, request, slug: str, clave_producto: str):
         entity = _entity_or_404(slug)
@@ -452,7 +456,7 @@ class PdmProductoDetailView(APIView):
 
 
 class PdmUploadView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = _PDM_PERMISSIONS
     parser_classes = [JSONParser]
 
     def post(self, request, slug: str):
@@ -563,7 +567,7 @@ class PdmUploadView(APIView):
 
 
 class PdmActividadCreateView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = _PDM_PERMISSIONS
     parser_classes = [JSONParser]
 
     def post(self, request, slug: str):
@@ -594,7 +598,7 @@ class PdmActividadCreateView(APIView):
 
 
 class PdmActividadesPorProductoView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = _PDM_PERMISSIONS
 
     def get(self, request, slug: str, clave_producto: str):
         entity = _entity_or_404(slug)
@@ -609,7 +613,7 @@ class PdmActividadesPorProductoView(APIView):
 
 
 class PdmActividadDetailView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = _PDM_PERMISSIONS
     parser_classes = [JSONParser]
 
     def put(self, request, slug: str, actividad_id: int):
@@ -651,7 +655,7 @@ class PdmActividadDetailView(APIView):
 
 
 class PdmEvidenciaView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = _PDM_PERMISSIONS
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def _serialize(self, evidencia, request):
@@ -744,7 +748,7 @@ class PdmEvidenciaView(APIView):
 
 
 class PdmAsignarResponsableView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = _PDM_PERMISSIONS
 
     def patch(self, request, slug: str, clave_producto: str):
         entity = _entity_or_404(slug)
@@ -766,7 +770,7 @@ class PdmAsignarResponsableView(APIView):
 
 
 class PdmAsignarResponsableUsuarioView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = _PDM_PERMISSIONS
 
     def patch(self, request, slug: str, clave_producto: str):
         from apps.accounts.models import UserEntityMembership
@@ -819,7 +823,7 @@ class PdmAsignarResponsableUsuarioView(APIView):
 
 
 class PdmEjecucionUploadView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = _PDM_PERMISSIONS
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request):
@@ -889,11 +893,11 @@ class PdmEjecucionUploadView(APIView):
 
 
 class PdmEjecucionMensualListView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = _PDM_PERMISSIONS
 
     def get(self, request):
         require_user_module(request.user, "pdm", message="El módulo PDM no está habilitado para tu usuario.")
-        if not _is_admin(request.user):
+        if not _entity_read_scope(request.user):
             raise PermissionDenied("Solo admin puede consultar ejecución mensual.")
         anio_param = request.query_params.get("anio")
         try:
@@ -904,7 +908,7 @@ class PdmEjecucionMensualListView(APIView):
 
 
 class PdmEjecucionMensualUploadView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = _PDM_PERMISSIONS
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request):
@@ -994,7 +998,7 @@ class PdmEjecucionMensualUploadView(APIView):
 
 
 class PdmEjecucionMensualDeleteView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = _PDM_PERMISSIONS
 
     def delete(self, request, anio: int, mes: int):
         require_user_module(request.user, "pdm", message="El módulo PDM no está habilitado para tu usuario.")
@@ -1029,7 +1033,7 @@ def _ejecucion_qs_for_user(user):
 
 
 class PdmEjecucionResumenAnualEntidadView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = _PDM_PERMISSIONS
 
     def get(self, request):
         require_user_module(request.user, "pdm", message="El módulo PDM no está habilitado para tu usuario.")
@@ -1038,7 +1042,7 @@ class PdmEjecucionResumenAnualEntidadView(APIView):
 
 
 class PdmEjecucionProductoView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = _PDM_PERMISSIONS
 
     def get(self, request, codigo_producto: str):
         require_user_module(request.user, "pdm", message="El módulo PDM no está habilitado para tu usuario.")
@@ -1098,6 +1102,12 @@ class PdmEjecucionProductoView(APIView):
         )
 
 
+def _require_pdm_armonizacion_read(user) -> None:
+    require_user_module(user, "pdm", message="El módulo PDM no está habilitado para tu usuario.")
+    if not _entity_read_scope(user):
+        raise PermissionDenied("Sin permiso para consultar armonizaciones de ejecución.")
+
+
 def _require_pdm_admin(user) -> None:
     require_user_module(user, "pdm", message="El módulo PDM no está habilitado para tu usuario.")
     if not _is_admin(user):
@@ -1105,10 +1115,10 @@ def _require_pdm_admin(user) -> None:
 
 
 class PdmArmonizacionListCreateView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = _PDM_PERMISSIONS
 
     def get(self, request):
-        _require_pdm_admin(request.user)
+        _require_pdm_armonizacion_read(request.user)
         entity = get_object_or_404(Entity, id=request.user.entity_id)
         items = [
             serializar_armonizacion(arm)
@@ -1138,7 +1148,7 @@ class PdmArmonizacionListCreateView(APIView):
 
 
 class PdmArmonizacionDetailView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = _PDM_PERMISSIONS
 
     def delete(self, request, armonizacion_id: int):
         _require_pdm_admin(request.user)
@@ -1151,10 +1161,10 @@ class PdmArmonizacionDetailView(APIView):
 
 
 class PdmArmonizacionCandidatosView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = _PDM_PERMISSIONS
 
     def get(self, request):
-        _require_pdm_admin(request.user)
+        _require_pdm_armonizacion_read(request.user)
         entity = get_object_or_404(Entity, id=request.user.entity_id)
         search = str(request.query_params.get("search") or "").strip()
         qs = productos_queryset_for_user(request.user, entity).order_by("codigo_producto", "clave_producto")
@@ -1184,7 +1194,7 @@ class PdmArmonizacionCandidatosView(APIView):
 
 
 class PdmContratosUploadView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = _PDM_PERMISSIONS
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request, slug: str):
@@ -1256,12 +1266,12 @@ class PdmContratosUploadView(APIView):
 class PdmExportPiipView(APIView):
     """Exporta Excel PIIP del año seleccionado (descarga directa, sin persistir)."""
 
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = _PDM_PERMISSIONS
 
     def get(self, request, slug: str):
         entity = _entity_or_404(slug)
         _ensure_user_can_manage_entity(request.user, entity)
-        if not _is_admin(request.user):
+        if not _entity_read_scope(request.user):
             raise PermissionDenied("Solo admin puede exportar PIIP.")
 
         anio_param = request.query_params.get("anio")
@@ -1293,12 +1303,14 @@ class PdmExportPiipView(APIView):
 class PdmExportPlanAccionView(APIView):
     """Exporta Excel Plan de Acción del año seleccionado (descarga directa, sin persistir)."""
 
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = _PDM_PERMISSIONS
 
     def get(self, request, slug: str):
         entity = _entity_or_404(slug)
         _ensure_user_can_manage_entity(request.user, entity)
-        if not (_is_admin(request.user) or _is_secretario(request.user)):
+        if not (
+            _is_admin(request.user) or _is_secretario(request.user) or "consulta_pdm" in user_roles(request.user)
+        ):
             raise PermissionDenied("Solo admin o secretario pueden exportar el plan de acción.")
 
         anio_param = request.query_params.get("anio")
@@ -1350,13 +1362,13 @@ class PdmExportPlanAccionView(APIView):
 
 
 class PdmContratosView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = _PDM_PERMISSIONS
 
     def get(self, request, slug: str):
         entity = _entity_or_404(slug)
         _ensure_user_can_manage_entity(request.user, entity)
         qs = PDMContratoRPS.objects.filter(entity=entity)
-        if not _is_admin(request.user):
+        if not _entity_read_scope(request.user):
             codigos = codigos_producto_for_user(request.user, entity)
             qs = qs.filter(codigo_producto__in=codigos) if codigos else qs.none()
         anio = request.query_params.get("anio")
@@ -1398,7 +1410,7 @@ class PdmContratosView(APIView):
 class PdmChatAnalyticsView(APIView):
     """Analítica del chat IA público del PDM (admin de la entidad o superadmin)."""
 
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = _PDM_PERMISSIONS
 
     def get(self, request, slug: str):
         entity = _entity_or_404(slug)

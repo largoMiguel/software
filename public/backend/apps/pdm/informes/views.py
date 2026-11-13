@@ -16,6 +16,7 @@ from rest_framework.response import Response
 from apps.common.roles import is_platform_superadmin, user_roles
 from apps.entities.models import Entity, Secretaria
 from apps.pdm.models import InformePDM, InformePdmEstado, InformePdmTipo
+from apps.pdm.access import PdmConsultaReadOnly
 from apps.pdm.views import _ensure_user_can_manage_entity, _is_admin, _is_secretario
 
 from .serializers import GenerarInformePdmSerializer, InformePdmSerializer
@@ -49,12 +50,12 @@ def _can_view_informes(user) -> bool:
     if is_platform_superadmin(user):
         return False
     roles = user_roles(user)
-    return "admin" in roles or "secretario" in roles
+    return "admin" in roles or "secretario" in roles or "consulta_pdm" in roles
 
 
 class InformePdmViewSet(viewsets.GenericViewSet):
     serializer_class = InformePdmSerializer
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, PdmConsultaReadOnly)
 
     def _entity(self) -> Entity:
         slug = self.kwargs.get("slug")

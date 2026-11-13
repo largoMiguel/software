@@ -7,7 +7,7 @@ const PdmDashboard = lazy(() => import("@/features/pdm/PdmDashboard"));
 
 export default function PdmDashboardPage() {
   const navigate = useNavigate();
-  const { estadisticas, resumenEjecucion, isAdmin, abrirModalArmonizacion } = usePdm();
+  const { estadisticas, resumenEjecucion, canViewEntityPdm, abrirModalArmonizacion } = usePdm();
 
   if (!estadisticas) {
     return <PdmLoadingOverlay message="Cargando resumen..." />;
@@ -19,7 +19,7 @@ export default function PdmDashboardPage() {
         estadisticas={estadisticas}
         resumenEjecucion={resumenEjecucion}
         onVerProductos={() => navigate("/pdm/productos")}
-        isAdmin={isAdmin}
+        isAdmin={canViewEntityPdm}
         onArmonizar={(codigoOrigen, ptoDefinitivo) => abrirModalArmonizacion(codigoOrigen, ptoDefinitivo)}
       />
     </Suspense>

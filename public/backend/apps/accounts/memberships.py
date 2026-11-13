@@ -151,7 +151,7 @@ def sync_user_cache_from_membership(membership: UserEntityMembership) -> None:
     )
 
 
-MANAGED_ROLES = frozenset({"superadmin", "admin", "secretario", "contratista", "ciudadano"})
+MANAGED_ROLES = frozenset({"superadmin", "admin", "secretario", "contratista", "ciudadano", "consulta_pdm"})
 
 
 def ensure_membership_group(role: str) -> None:

@@ -47,7 +47,7 @@ export function isPlatformSuperadmin(
 export function primaryRole(user: { roles?: string[]; role?: string } | null | undefined): string {
   if (!user) return "";
   if (user.role) return user.role;
-  const priority = ["superadmin", "admin", "secretario", "contratista", "ciudadano"];
+  const priority = ["superadmin", "admin", "secretario", "contratista", "ciudadano", "consulta_pdm"];
   for (const r of priority) {
     if (user.roles?.includes(r)) return r;
   }
@@ -67,6 +67,9 @@ export function isUserModuleEnabled(
   if (!user) return false;
   const enabled = user.enabled_modules ?? [];
   const role = primaryRole(user);
+  if (role === "consulta_pdm") {
+    return MODULE_FLAG_TO_KEY[module] === "pdm";
+  }
   if (role === "secretario") {
     if (enabled.length === 0) return false;
     return enabled.includes(MODULE_FLAG_TO_KEY[module]);

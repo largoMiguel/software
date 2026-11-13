@@ -57,6 +57,9 @@ interface PdmContextValue {
   enablePdm: boolean;
   isAdmin: boolean;
   isSecretario: boolean;
+  isConsulta: boolean;
+  isReadOnly: boolean;
+  canViewEntityPdm: boolean;
   canDelegateContratista: boolean;
   puedeCrearEvidencia: boolean;
   secretariaUsuarioId: number | undefined;
@@ -187,8 +190,13 @@ export function PdmProvider({ children }: { children: ReactNode }) {
   const secretariaUsuarioId = useAuthStore((s) => s.user?.secretaria?.id);
   const isAdmin = roles.includes("admin");
   const isSecretario = roles.includes("secretario");
+  const isConsulta = roles.includes("consulta_pdm");
+  const isReadOnly = isConsulta;
+  const canViewEntityPdm = isAdmin || isConsulta;
   const canDelegateContratista = isSecretario;
-  const puedeCrearEvidencia = Boolean(isAdmin || isSecretario || roles.includes("superadmin") || isSuperuser);
+  const puedeCrearEvidencia = Boolean(
+    !isReadOnly && (isAdmin || isSecretario || roles.includes("superadmin") || isSuperuser),
+  );
 
   const route = usePdmRoute();
   const navigate = useNavigate();
@@ -713,6 +721,9 @@ export function PdmProvider({ children }: { children: ReactNode }) {
     enablePdm,
     isAdmin,
     isSecretario,
+    isConsulta,
+    isReadOnly,
+    canViewEntityPdm,
     canDelegateContratista,
     puedeCrearEvidencia,
     secretariaUsuarioId,
@@ -829,6 +840,9 @@ export function PdmProvider({ children }: { children: ReactNode }) {
     enablePdm,
     isAdmin,
     isSecretario,
+    isConsulta,
+    isReadOnly,
+    canViewEntityPdm,
     canDelegateContratista,
     puedeCrearEvidencia,
     secretariaUsuarioId,

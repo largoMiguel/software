@@ -43,6 +43,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         ("secretario", "Secretario"),
         ("contratista", "Contratista"),
         ("ciudadano", "Ciudadano"),
+        ("consulta_pdm", "Consulta PDM"),
     )
 
     email = models.EmailField(unique=True, db_index=True)

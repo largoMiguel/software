@@ -11,13 +11,13 @@ const baseTabs: Array<{
   end: boolean;
   label: string;
   icon: typeof LayoutDashboard;
-  roles?: readonly ("admin" | "secretario")[];
+  roles?: readonly ("admin" | "secretario" | "consulta_pdm")[];
 }> = [
   { to: "/pdm", end: true, label: "Resumen", icon: LayoutDashboard },
   { to: "/pdm/productos", end: false, label: "Productos", icon: FileSpreadsheet },
   { to: "/pdm/analisis", end: false, label: "Análisis", icon: BarChart3 },
   { to: "/pdm/proyectos", end: false, label: "Proyectos", icon: FolderKanban },
-  { to: "/pdm/informes", end: false, label: "Informes", icon: FileBarChart2, roles: ["admin", "secretario"] as const },
+  { to: "/pdm/informes", end: false, label: "Informes", icon: FileBarChart2, roles: ["admin", "secretario", "consulta_pdm"] as const },
 ];
 
 function PdmLayoutInner() {
@@ -28,6 +28,9 @@ function PdmLayoutInner() {
     loading,
     isAdmin,
     isSecretario,
+    isConsulta,
+    isReadOnly,
+    canViewEntityPdm,
     saving,
     error,
     uploadFeedback,
@@ -44,7 +47,11 @@ function PdmLayoutInner() {
   const isDetail = route === "detalle";
   const tabs = baseTabs.filter((tab) => {
     if (!tab.roles) return true;
-    return (isAdmin && tab.roles.includes("admin")) || (isSecretario && tab.roles.includes("secretario"));
+    return (
+      (isAdmin && tab.roles.includes("admin")) ||
+      (isSecretario && tab.roles.includes("secretario")) ||
+      (isConsulta && tab.roles.includes("consulta_pdm"))
+    );
   });
 
   const subtitle = !tieneDatos
@@ -87,9 +94,10 @@ function PdmLayoutInner() {
               <ArrowLeft className="h-4 w-4" /> Volver
             </button>
           )}
-          {tieneDatos && isAdmin && (
+          {tieneDatos && canViewEntityPdm && (
             <PdmAccionesMenu
               disabled={saving}
+              readOnly={isReadOnly}
               onExportarPiip={handleExportarPiip}
               onContratos={() => setModalContratos(true)}
               onEjecucion={() => setModalEjecucion(true)}

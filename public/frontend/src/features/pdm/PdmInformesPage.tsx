@@ -487,7 +487,7 @@ function PlanAccionModal({ slug, onClose, secretarias, isAdmin, defaultAnio }: P
 }
 
 export default function PdmInformesPage() {
-  const { slug, isAdmin, isSecretario, filtroAnio, entityId, secretariaUsuarioId } = usePdm();
+  const { slug, isAdmin, isSecretario, isConsulta, isReadOnly, filtroAnio, entityId, secretariaUsuarioId } = usePdm();
   const entity = useAuthStore((s) => s.user?.entity);
   const queryClient = useQueryClient();
   const [showPicker, setShowPicker] = useState(false);
@@ -497,7 +497,7 @@ export default function PdmInformesPage() {
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const canView = isAdmin || isSecretario;
+  const canView = isAdmin || isSecretario || isConsulta;
 
   const {
     data: informes = [],
@@ -523,10 +523,10 @@ export default function PdmInformesPage() {
   const { data: secretarias = [], isLoading: secretariasLoading } = useQuery({
     queryKey: ["secretarias", entityId],
     queryFn: () => secretariasApi.list(entityId),
-    enabled: isAdmin && Boolean(entityId),
+    enabled: (isAdmin || isConsulta) && Boolean(entityId),
   });
 
-  const loading = informesLoading || (isAdmin && secretariasLoading);
+  const loading = informesLoading || ((isAdmin || isConsulta) && secretariasLoading);
   const loadError = informesError
     ? formatApiError(informesErr, "No se pudieron cargar los informes.")
     : null;
@@ -627,23 +627,25 @@ export default function PdmInformesPage() {
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowPicker(true)}
-          disabled={hasActiveJob || submitting}
-          className={`${pdmBtnPrimary} whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-60`}
-          title={hasActiveJob ? "Ya hay un informe en cola o generándose" : undefined}
-        >
-          {hasActiveJob ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" /> Generando informe…
-            </>
-          ) : (
-            <>
-              <Plus className="h-4 w-4" /> Crear informe
-            </>
-          )}
-        </button>
+        {!isReadOnly ? (
+          <button
+            type="button"
+            onClick={() => setShowPicker(true)}
+            disabled={hasActiveJob || submitting}
+            className={`${pdmBtnPrimary} whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-60`}
+            title={hasActiveJob ? "Ya hay un informe en cola o generándose" : undefined}
+          >
+            {hasActiveJob ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" /> Generando informe…
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4" /> Crear informe
+              </>
+            )}
+          </button>
+        ) : null}
       </div>
 
       {hasActiveJob && (
@@ -736,14 +738,16 @@ export default function PdmInformesPage() {
                     <Download className="h-3 w-3 sm:h-4 sm:w-4" />
                     {downloadingId === informe.id ? "Descargando…" : "Descargar"}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleDelete(informe.id)}
-                    className="flex-shrink-0 rounded-md border border-slate-200 p-1 text-slate-400 transition-colors hover:border-red-300 hover:text-red-500 sm:p-2"
-                    title="Eliminar informe"
-                  >
-                    <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  </button>
+                  {!isReadOnly ? (
+                    <button
+                      type="button"
+                      onClick={() => void handleDelete(informe.id)}
+                      className="flex-shrink-0 rounded-md border border-slate-200 p-1 text-slate-400 transition-colors hover:border-red-300 hover:text-red-500 sm:p-2"
+                      title="Eliminar informe"
+                    >
+                      <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    </button>
+                  ) : null}
                 </div>
               </div>
             );

@@ -162,6 +162,19 @@ Tras cambiar variables Google: `docker compose -f deploy/docker-compose.demo.yml
 
 ---
 
+## Módulo PDM — Roles
+
+| Rol | Alcance | Lectura | Escritura |
+|-----|---------|---------|-----------|
+| `admin` | Toda la entidad | Dashboard, productos, análisis, proyectos, ejecución, contratos, armonizaciones, export PIIP/Plan de Acción, informes | Carga PIIP, actividades, evidencias, asignaciones, ejecución, contratos, armonizaciones, generar/borrar informes |
+| `secretario` | Productos de su secretaría | Mismo catálogo acotado + informes (solo los propios en PDF) | Actividades/evidencias y delegación a contratistas en su secretaría |
+| `contratista` | Productos asignados al usuario | Detalle, actividades y evidencias asignadas | Evidencias en productos delegados |
+| `consulta_pdm` | Toda la entidad (solo módulo PDM) | Igual visión que `admin` en consultas: tablero, productos, análisis, proyectos, ejecución, armonizaciones, contratos, descarga PIIP/Plan de Acción, listado y descarga de informes PDF | **Ninguna** — la API rechaza métodos distintos de GET/HEAD (`PdmConsultaReadOnly`) |
+
+Asignación: **Usuarios → rol Consulta PDM** (`enabled_modules: ["pdm"]`). No requiere secretaría. No accede a PQRS ni a otros módulos (`user_has_module` solo permite `pdm`).
+
+---
+
 ## Módulo PDM — Productos con varios indicadores
 
 Un mismo **código de producto MGA** (7 dígitos, p. ej. `4003018`) puede tener **varias filas** en el Excel del Plan Indicativo, una por **indicador** (`400301802`, `400301807`, …), con metas y presupuesto PPI distintos.
@@ -249,7 +262,7 @@ UI: modal **Nueva evidencia de ejecución** → campo **Fecha de ejecución** (o
 
 ## Informes PDM
 
-Pestaña **Informes** en el módulo PDM (roles `admin` y `secretario`). La sección agrupa varios tipos de informe; botón **Crear informe** con selector de tipo:
+Pestaña **Informes** en el módulo PDM (roles `admin`, `secretario` y `consulta_pdm` en lectura). La sección agrupa varios tipos de informe; botón **Crear informe** con selector de tipo (solo `admin` y `secretario`):
 
 | Tipo | Formato | Comportamiento |
 |---|---|---|

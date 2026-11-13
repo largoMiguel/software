@@ -870,7 +870,7 @@ const ActividadCard = memo(function ActividadCard({
                   <Edit size={14} />
                 </PdmBtn>
               )}
-              {(!actividad.tiene_evidencia || isAdmin) && (
+              {puedeCrearEvidencia && (!actividad.tiene_evidencia || isAdmin) && (
                 <PdmBtn
                   variant="danger"
                   size="sm"

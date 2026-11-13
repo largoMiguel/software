@@ -50,6 +50,11 @@ DEFAULT_ROLES: dict[str, dict] = {
         "is_system": True,
         "perms": [],
     },
+    "consulta_pdm": {
+        "description": "Consulta PDM: lectura del Plan de Desarrollo Municipal sin modificaciones.",
+        "is_system": True,
+        "perms": [],
+    },
 }
 
 

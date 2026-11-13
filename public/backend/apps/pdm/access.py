@@ -5,7 +5,7 @@ import re
 from collections import defaultdict
 
 from django.db.models import QuerySet, Sum
-
+from rest_framework import permissions
 from apps.common.media_paths import is_safe_media_relative_path
 from apps.common.roles import is_platform_superadmin, user_roles
 from apps.entities.models import Entity
@@ -28,12 +28,32 @@ def _is_contratista(user) -> bool:
     return "contratista" in user_roles(user)
 
 
+def _is_consulta(user) -> bool:
+    return "consulta_pdm" in user_roles(user)
+
+
+def _entity_read_scope(user) -> bool:
+    return _is_admin(user) or _is_consulta(user)
+
+
+class PdmConsultaReadOnly(permissions.BasePermission):
+    """Usuarios con rol consulta_pdm solo pueden usar métodos de lectura en la API PDM."""
+
+    def has_permission(self, request, view) -> bool:
+        if "consulta_pdm" not in user_roles(request.user):
+            return True
+        return request.method in permissions.SAFE_METHODS
+
+    def has_object_permission(self, request, view, obj) -> bool:
+        return self.has_permission(request, view)
+
+
 def productos_queryset_for_user(user, entity: Entity) -> QuerySet[PdmProducto]:
     """Productos visibles según rol."""
     qs = PdmProducto.objects.filter(entity=entity).select_related(
         "responsable_secretaria", "responsable_usuario"
     )
-    if _is_admin(user):
+    if _entity_read_scope(user):
         return qs
     if _is_secretario(user):
         if not user.secretaria_id:
@@ -59,7 +79,7 @@ def claves_producto_for_user(user, entity: Entity) -> list[str]:
 def ejecucion_queryset_for_user(user, entity: Entity) -> QuerySet[PDMEjecucionPresupuestal]:
     """Ejecución presupuestal de la entidad; secretario/contratista solo filas de sus productos."""
     qs = PDMEjecucionPresupuestal.objects.filter(entity=entity)
-    if _is_admin(user):
+    if _entity_read_scope(user):
         return qs
     if _is_secretario(user) or _is_contratista(user):
         codigos = codigos_producto_for_user(user, entity)
@@ -154,7 +174,7 @@ def actividades_queryset_for_user(user, entity: Entity) -> QuerySet[PdmActividad
         .select_related("responsable_secretaria")
         .prefetch_related("evidencia")
     )
-    if _is_admin(user):
+    if _entity_read_scope(user):
         return qs
     if _is_secretario(user) or _is_contratista(user):
         claves = claves_producto_for_user(user, entity)
@@ -193,7 +213,7 @@ def user_can_access_codigo_producto(user, entity: Entity, codigo_producto: str) 
 def user_can_access_actividad(user, entity: Entity, actividad: PdmActividad) -> bool:
     if actividad.entity_id != entity.id:
         return False
-    if _is_admin(user) or is_platform_superadmin(user):
+    if _entity_read_scope(user) or is_platform_superadmin(user):
         return True
     if _is_secretario(user):
         return user_can_access_producto(user, entity, actividad.clave_producto)

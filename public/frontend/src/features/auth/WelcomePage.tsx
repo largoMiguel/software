@@ -96,6 +96,7 @@ const ROLE_LABELS: Record<string, string> = {
   ciudadano: "Ciudadano",
   superadmin: "Superadmin",
   auditor: "Auditor",
+  consulta_pdm: "Consulta PDM",
 };
 
 function greetingForHour(date = new Date()): { text: string; Icon: LucideIcon } {

@@ -22,7 +22,7 @@ export interface AppUser {
 export interface CreateUserPayload {
   email: string;
   full_name: string;
-  role: "admin" | "secretario" | "contratista" | "ciudadano" | "superadmin";
+  role: "admin" | "secretario" | "contratista" | "ciudadano" | "consulta_pdm" | "superadmin";
   password?: string;
   invite?: boolean;
   entity?: number | null;

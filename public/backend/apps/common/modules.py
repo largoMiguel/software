@@ -38,6 +38,8 @@ def user_has_module(user, module_key: str) -> bool:
         return False
     user_modules = getattr(user, "enabled_modules", None) or []
     role = primary_role(user)
+    if role == "consulta_pdm":
+        return module_key == "pdm"
     if role == "secretario":
         if not user_modules:
             return False

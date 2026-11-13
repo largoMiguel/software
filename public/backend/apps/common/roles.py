@@ -1,6 +1,6 @@
 """Helpers de roles compartidos entre apps."""
 
-ROLE_PRIORITY = ("superadmin", "admin", "secretario", "contratista", "ciudadano")
+ROLE_PRIORITY = ("superadmin", "admin", "secretario", "contratista", "ciudadano", "consulta_pdm")
 
 
 def user_roles(user) -> set[str]:

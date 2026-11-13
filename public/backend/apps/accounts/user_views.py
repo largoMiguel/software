@@ -276,8 +276,10 @@ class UserAdminSerializer(serializers.ModelSerializer):
                     raise ValidationError({"role": "Secretario solo puede crear contratistas."})
                 supervisor = actor
                 validated_data["entity"] = actor.entity
-            elif role not in {"admin", "secretario", "contratista", "ciudadano"}:
-                raise ValidationError({"role": "Admin solo puede crear admin/secretario/contratista/ciudadano."})
+            elif role not in {"admin", "secretario", "contratista", "ciudadano", "consulta_pdm"}:
+                raise ValidationError(
+                    {"role": "Admin solo puede crear admin/secretario/contratista/ciudadano/consulta_pdm."}
+                )
             else:
                 validated_data["entity"] = actor.entity
             validated_data["is_superuser"] = False

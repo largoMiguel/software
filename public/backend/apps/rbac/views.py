@@ -137,7 +137,11 @@ class RoleViewSet(viewsets.ModelViewSet):
 
         user.groups.set(groups)
         primary = next(
-            (name for name in ("superadmin", "admin", "secretario", "ciudadano") if name in group_names),
+            (
+                name
+                for name in ("superadmin", "admin", "secretario", "ciudadano", "consulta_pdm")
+                if name in group_names
+            ),
             groups[0].name if groups else "",
         )
         user.role = primary

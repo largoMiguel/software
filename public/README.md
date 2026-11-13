@@ -154,6 +154,7 @@ npm run dev        # http://localhost:5173 (proxy /api → :8000)
   - `superadmin` (todos los permisos, no se puede borrar)
   - `admin` (todos los permisos, no se puede borrar)
   - `secretario`, `ciudadano`, `contratista`, `auditor` (sin permisos asignados; añadirlos desde Admin o API)
+  - `consulta_pdm` — solo lectura del módulo PDM en la entidad (sin acceso a otros módulos)
 
 ### Proteger una vista DRF
 
@@ -170,13 +171,8 @@ class ReporteViewSet(viewsets.ReadOnlyModelViewSet):
 ### Proteger una ruta en React
 
 ```tsx
-<Route element={<RequireRole roles={["admin"]} />}>
-  <Route element={<RequireModule module="enable_pqrs" />}>
-    <Route path="/pqrs" element={<PqrsLayout />}>
-      <Route index element={<PQRSDashboard />} />
-      <Route path="solicitudes" element={<PQRSListPage />} />
-    </Route>
-  </Route>
+<Route path="/pdm/*" element={<ModuleRouteGuard moduleKey="pdm" />}>
+  {/* rutas internas del PDM — ver App.tsx y core/auth/routes.ts */}
 </Route>
 ```
 

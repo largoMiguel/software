@@ -453,7 +453,11 @@ function UserModal({
     setError(null);
     try {
       const payload: CreateUserPayload & { is_active?: boolean; nueva_secretaria_nombre?: string } = { ...form };
-      if (payload.role !== "secretario" && payload.role !== "contratista") {
+      if (payload.role === "consulta_pdm") {
+        delete payload.secretaria;
+        delete payload.nueva_secretaria_nombre;
+        payload.enabled_modules = ["pdm"];
+      } else if (payload.role !== "secretario" && payload.role !== "contratista") {
         delete payload.secretaria;
         delete payload.nueva_secretaria_nombre;
         payload.enabled_modules = [];
@@ -549,7 +553,14 @@ function UserModal({
                 <select
                   required
                   value={form.role}
-                  onChange={(e) => setForm((f) => ({ ...f, role: e.target.value as CreateUserPayload["role"] }))}
+                  onChange={(e) => {
+                    const role = e.target.value as CreateUserPayload["role"];
+                    setForm((f) => ({
+                      ...f,
+                      role,
+                      enabled_modules: role === "consulta_pdm" ? ["pdm"] : f.enabled_modules,
+                    }));
+                  }}
                   className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[#3eafd4] focus:outline-none focus:ring-1 focus:ring-[#3eafd4]"
                 >
                   {superMode && <option value="superadmin">Superadmin</option>}
@@ -558,6 +569,7 @@ function UserModal({
                   {!secretarioMode && <option value="contratista">Contratista</option>}
                   {secretarioMode && <option value="contratista">Contratista</option>}
                   {!secretarioMode && <option value="ciudadano">Ciudadano</option>}
+                  {!secretarioMode && <option value="consulta_pdm">Consulta PDM</option>}
                 </select>
               </label>
               {!initial && (

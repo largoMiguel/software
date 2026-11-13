@@ -10,7 +10,7 @@ export default function PdmAnalisisPage() {
   const {
     slug,
     enablePdm,
-    isAdmin,
+    canViewEntityPdm,
     filtroAnioAnalisis,
     setFiltroAnioAnalisis,
     filtroSecretariaAnalisis,
@@ -55,7 +55,7 @@ export default function PdmAnalisisPage() {
           filtroSecretaria={filtroSecretariaAnalisis}
           onFiltroSecretaria={setFiltroSecretariaAnalisis}
           secretarias={secretarias}
-          isAdmin={isAdmin}
+          isAdmin={canViewEntityPdm}
         />
       </Suspense>
     </>
